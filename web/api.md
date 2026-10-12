@@ -7,11 +7,15 @@ Default API: `VITE_API_ORIGIN` (local `http://127.0.0.1:8787`)
 | Unlock gate 1–3 | `POST /api/v1/auth/challenge` + `/gate/1|2|3` |
 | Session restore | `GET /api/v1/auth/me` |
 | Logout | `POST /api/v1/auth/logout` |
-| Work / Home | `GET|PUT /api/v1/mode` |
+| Work / Personal | `GET|PUT /api/v1/mode` |
 | Dawn scroll | `GET /api/v1/briefing` |
 | Quest log | `GET|POST /api/v1/jobs` |
 | Focus block | `GET|POST /api/v1/focus` |
-| CAST / Hey Ragi | `POST /api/v1/ai/chat` |
+| H-01 HOME / charts | `GET /api/v1/dashboard` |
+| F-33 FORGE | `GET|POST|PATCH /api/v1/projects` · `/goals` · `/activities` |
+| G-55 GOLD | `GET|POST /api/v1/finance` |
+| C-88 CLOCK | `/meetings` · `/reminders` · `/emergencies` |
+| CAST / Hey Ragi | `POST /api/v1/ai/chat` (Gemini if key set, else local vault brain) |
 | API pill | `GET /health` |
 
-Mic jump is local Web Audio → amber scribe sprite (no audio leaves the browser except when you CAST text to Gemini).
+Mic jump is local Web Audio → amber scribe sprite.

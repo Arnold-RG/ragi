@@ -1,6 +1,17 @@
 import { API_ORIGIN } from "../api/client";
 
-export type Room = "vault" | "hall" | "den" | "void";
+export type Room =
+  | "vault"
+  | "hall"
+  | "home"
+  | "forge"
+  | "gold"
+  | "clock"
+  | "map"
+  | "den"
+  | "void";
+
+const LOCKED: Room[] = ["hall", "home", "forge", "gold", "clock", "map", "den"];
 
 export function renderShell(root: HTMLElement) {
   root.innerHTML = `
@@ -15,6 +26,11 @@ export function renderShell(root: HTMLElement) {
     <nav class="nav-cryptic" aria-label="Cryptic rooms">
       <button type="button" data-room="vault" class="is-here">N-14 VAULT</button>
       <button type="button" data-room="hall" disabled>W-02 HALL</button>
+      <button type="button" data-room="home" disabled>H-01 HOME</button>
+      <button type="button" data-room="forge" disabled>F-33 FORGE</button>
+      <button type="button" data-room="gold" disabled>G-55 GOLD</button>
+      <button type="button" data-room="clock" disabled>C-88 CLOCK</button>
+      <button type="button" data-room="map" disabled>M-99 MAP</button>
       <button type="button" data-room="den" disabled>E-77 DEN</button>
       <button type="button" data-room="void">S-00 VOID</button>
     </nav>
@@ -22,6 +38,11 @@ export function renderShell(root: HTMLElement) {
     <div class="frame">
       <section id="roomVault" class="view is-on"></section>
       <section id="roomHall" class="view"></section>
+      <section id="roomHome" class="view"></section>
+      <section id="roomForge" class="view"></section>
+      <section id="roomGold" class="view"></section>
+      <section id="roomClock" class="view"></section>
+      <section id="roomMap" class="view"></section>
       <section id="roomDen" class="view">
         <p class="prompt">&gt; DEN <span class="blink">_</span></p>
         <p class="lore">Side archive for sealed notes. Sparse on purpose.</p>
@@ -46,6 +67,11 @@ export function renderShell(root: HTMLElement) {
   return {
     vault: root.querySelector("#roomVault") as HTMLElement,
     hall: root.querySelector("#roomHall") as HTMLElement,
+    home: root.querySelector("#roomHome") as HTMLElement,
+    forge: root.querySelector("#roomForge") as HTMLElement,
+    gold: root.querySelector("#roomGold") as HTMLElement,
+    clock: root.querySelector("#roomClock") as HTMLElement,
+    map: root.querySelector("#roomMap") as HTMLElement,
     den: root.querySelector("#roomDen") as HTMLElement,
     voidMsg: root.querySelector("#voidMsg") as HTMLElement,
     apiPill: root.querySelector("#apiPill") as HTMLElement,
@@ -54,21 +80,27 @@ export function renderShell(root: HTMLElement) {
   };
 }
 
+export type ShellParts = ReturnType<typeof renderShell>;
+
 export function setApiPill(el: HTMLElement, ok: boolean) {
   el.textContent = ok ? `API OK · ${API_ORIGIN}` : `API DOWN · ${API_ORIGIN}`;
   el.classList.toggle("ok", ok);
   el.classList.toggle("bad", !ok);
 }
 
-export function goRoom(
-  room: Room,
-  parts: ReturnType<typeof renderShell>,
-  unlocked: boolean,
-) {
+export function goRoom(room: Room, parts: ShellParts, unlocked: boolean) {
   parts.voidMsg.classList.remove("is-on");
-  parts.vault.classList.remove("is-on");
-  parts.hall.classList.remove("is-on");
-  parts.den.classList.remove("is-on");
+  const rooms: Array<keyof ShellParts> = [
+    "vault",
+    "hall",
+    "home",
+    "forge",
+    "gold",
+    "clock",
+    "map",
+    "den",
+  ];
+  rooms.forEach((k) => (parts[k] as HTMLElement).classList.remove("is-on"));
   parts.navButtons.forEach((b) => b.classList.remove("is-here"));
 
   if (room === "void") {
@@ -77,19 +109,27 @@ export function goRoom(
     return;
   }
 
-  if ((room === "hall" || room === "den") && !unlocked) {
+  if (LOCKED.includes(room) && !unlocked) {
     parts.vault.classList.add("is-on");
     parts.navButtons.find((b) => b.dataset.room === "vault")?.classList.add("is-here");
     return;
   }
 
-  const map = { vault: parts.vault, hall: parts.hall, den: parts.den } as const;
-  map[room].classList.add("is-on");
+  const el = parts[room] as HTMLElement;
+  el.classList.add("is-on");
   parts.navButtons.find((b) => b.dataset.room === room)?.classList.add("is-here");
 }
 
-export function unlockNav(parts: ReturnType<typeof renderShell>) {
+export function unlockNav(parts: ShellParts) {
   parts.navButtons.forEach((b) => {
-    if (b.dataset.room === "hall" || b.dataset.room === "den") b.disabled = false;
+    const room = b.dataset.room as Room;
+    if (LOCKED.includes(room)) b.disabled = false;
+  });
+}
+
+export function lockNav(parts: ShellParts) {
+  parts.navButtons.forEach((b) => {
+    const room = b.dataset.room as Room;
+    if (LOCKED.includes(room)) b.disabled = true;
   });
 }

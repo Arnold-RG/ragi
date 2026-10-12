@@ -20,14 +20,6 @@ export async function setMode(ownerId: string, mode: "work" | "personal") {
 
 export async function getBriefing(ownerId: string) {
   const { enc, dec } = await withOwnerVault(ownerId);
-  const cached = await db.briefingCache.findUnique({ where: { ownerId } });
-  if (cached) {
-    return {
-      source: "cache" as const,
-      generatedAt: cached.generatedAt,
-      briefing: JSON.parse(dec(cached.payloadEnc)),
-    };
-  }
 
   const jobs = await db.jobEntry.count({ where: { ownerId } });
   const focus = await db.focusBlock.findFirst({
@@ -35,14 +27,26 @@ export async function getBriefing(ownerId: string) {
     orderBy: { startsAt: "asc" },
   });
   const mode = await db.modeState.findUnique({ where: { ownerId } });
+  const [projects, goals, meetings, reminders, emergencies] = await Promise.all([
+    db.project.count({ where: { ownerId, status: "active" } }),
+    db.goal.count({ where: { ownerId, status: "active" } }),
+    db.meeting.count({ where: { ownerId, startsAt: { gte: new Date() }, status: { not: "cancelled" } } }),
+    db.reminder.count({ where: { ownerId, done: false } }),
+    db.emergency.count({ where: { ownerId, active: true } }),
+  ]);
 
   const briefing = {
     mode: mode?.mode ?? "work",
     openJobs: jobs,
+    projects,
+    goals,
+    meetings,
+    reminders,
+    emergencies,
     nextFocus: focus
       ? { label: dec(focus.labelEnc), startsAt: focus.startsAt, endsAt: focus.endsAt }
       : null,
-    summary: `Morning briefing ready. Mode ${mode?.mode ?? "work"}. ${jobs} job tracks. Focus ${focus ? "scheduled" : "clear"}.`,
+    summary: `Dawn scroll · mode ${mode?.mode ?? "work"} · ${projects} projects · ${goals} goals · ${meetings} meetings · ${reminders} reminders · ${emergencies} emergencies · ${jobs} quests · focus ${focus ? "locked" : "clear"}.`,
   };
 
   await db.briefingCache.upsert({

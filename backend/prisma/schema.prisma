@@ -30,6 +30,13 @@ model Owner {
   modeState         ModeState?
   oauthTokens       OAuthToken[]
   briefingCache     BriefingCache?
+  projects          Project[]
+  goals             Goal[]
+  activities        Activity[]
+  financeEntries    FinanceEntry[]
+  meetings          Meeting[]
+  reminders         Reminder[]
+  emergencies       Emergency[]
 }
 
 model WebAuthnCredential {
@@ -172,4 +179,111 @@ model SystemMeta {
   key             String   @id
   value           String
   updatedAt       DateTime @updatedAt
+}
+
+model Project {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  notesEnc        String?
+  realm           String   @default("personal")
+  status          String   @default("active")
+  progress        Int      @default(0)
+  dueAt           DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, realm, status])
+}
+
+model Goal {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  realm           String   @default("personal")
+  status          String   @default("active")
+  progress        Int      @default(0)
+  targetEnc       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, status])
+}
+
+model Activity {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  kind            String   @default("task")
+  day             DateTime
+  done            Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, day])
+}
+
+model FinanceEntry {
+  id              String   @id @default(cuid())
+  ownerId         String
+  kind            String
+  amountCents     Int
+  labelEnc        String
+  categoryEnc     String?
+  at              DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, at])
+  @@index([ownerId, kind])
+}
+
+model Meeting {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  placeEnc        String?
+  startsAt        DateTime
+  endsAt          DateTime
+  status          String   @default("scheduled")
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, startsAt])
+}
+
+model Reminder {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  dueAt           DateTime
+  priority        String   @default("normal")
+  done            Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, dueAt, done])
+}
+
+model Emergency {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  bodyEnc         String
+  severity        String   @default("high")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, active])
 }

@@ -51,7 +51,7 @@ export function createFocus(input: { label: string; startsAt: string; endsAt: st
 }
 
 export function chatAi(message: string, mode?: "work" | "personal") {
-  return api<{ reply: string; mode: string; model: string }>("/api/v1/ai/chat", {
+  return api<{ reply: string; mode: string; model: string; signal?: string }>("/api/v1/ai/chat", {
     method: "POST",
     body: JSON.stringify({ message, mode }),
   });

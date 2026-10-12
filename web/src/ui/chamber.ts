@@ -41,7 +41,7 @@ export async function renderChamber(root: HTMLElement, onLogout: () => void) {
           <h3>ALIGN</h3>
           <div class="modes">
             <button type="button" data-mode="work" aria-pressed="true">WORK</button>
-            <button type="button" data-mode="personal" aria-pressed="false">HOME</button>
+            <button type="button" data-mode="personal" aria-pressed="false">PERSONAL</button>
           </div>
         </div>
         <div class="stat-box">
@@ -78,7 +78,7 @@ export async function renderChamber(root: HTMLElement, onLogout: () => void) {
     </div>
     <div class="voice-meter" aria-hidden="true"><span id="voiceLevel"></span></div>
     <div class="chat-log" id="chatLog"></div>
-    <p class="hint">TALK = MIC · AMBER SCRIBE JUMPS ON VOICE · CAST SENDS TO BACKEND GEMINI</p>
+    <p class="hint">TALK = MIC · AMBER JUMPS · CAST = LOCAL SECRETARY (OR GEMINI IF KEY SET) · OPEN H-01 HOME FOR DASHBOARD</p>
   `;
 
   const npcLine = root.querySelector("#npcLine") as HTMLElement;
@@ -217,7 +217,8 @@ export async function renderChamber(root: HTMLElement, onLogout: () => void) {
     try {
       const res = await chatAi(text, mode);
       addChat("ragi", res.reply);
-      npcLine.textContent = "RAGI: answered";
+      npcLine.textContent =
+        res.signal === "gemini" ? "RAGI: cloud signal" : "RAGI: local vault signal";
     } catch (err) {
       const label = err instanceof ApiError ? err.message : "cast_failed";
       addChat("ragi", `(signal lost :: ${label})`);

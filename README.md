@@ -5,9 +5,12 @@ Owner-only private secretary. **Public code. Private locks and secrets.**
 Dark-age CRT chamber in the browser, Fastify vault on the wire. Three gates before anything opens.
 
 - **Web (CRT UI):** [`web/`](./web/) — Vite + TypeScript · Pages at `/ragi/`
+- **Rooms:** Vault · Hall · **Home** · Forge · Gold · Clock · Map · Den
 - **Backend:** [`backend/`](./backend/) — see [`backend/ARCHITECTURE.md`](./backend/ARCHITECTURE.md)
 - **Stack:** [`docker-compose.yml`](./docker-compose.yml) — Postgres · Redis · API · optional nginx web
 - **Route map:** [`web/api.md`](./web/api.md)
+
+CAST uses Gemini when `GEMINI_API_KEY` is set; otherwise the **local vault secretary** answers from your real projects, finance, meetings, and goals (no more dead signal).
 
 ### Layers
 

@@ -2,9 +2,10 @@ import { pingHealth } from "./api/client";
 import { me } from "./api/auth";
 import { createNote, listNotes } from "./api/secretary";
 import { isUnlocked, clearSession } from "./state/session";
-import { goRoom, renderShell, setApiPill, unlockNav, type Room } from "./ui/shell";
+import { goRoom, renderShell, setApiPill, unlockNav, lockNav, type Room } from "./ui/shell";
 import { renderUnlock } from "./ui/unlock";
 import { renderChamber } from "./ui/chamber";
+import { renderClock, renderForge, renderGold, renderHome, renderMap } from "./ui/rooms";
 
 export async function startApp(root: HTMLElement) {
   const shell = renderShell(root);
@@ -41,6 +42,16 @@ export async function startApp(root: HTMLElement) {
     await refreshDen();
   });
 
+  async function paintRoom(room: Room) {
+    if (!unlocked) return;
+    if (room === "home") await renderHome(shell.home);
+    if (room === "forge") await renderForge(shell.forge);
+    if (room === "gold") await renderGold(shell.gold);
+    if (room === "clock") await renderClock(shell.clock);
+    if (room === "map") await renderMap(shell.map);
+    if (room === "den") await refreshDen();
+  }
+
   async function enterHall() {
     unlocked = true;
     unlockNav(shell);
@@ -49,9 +60,7 @@ export async function startApp(root: HTMLElement) {
     disposeChamber = await renderChamber(shell.hall, () => {
       unlocked = false;
       disposeChamber = null;
-      shell.navButtons.forEach((b) => {
-        if (b.dataset.room === "hall" || b.dataset.room === "den") b.disabled = true;
-      });
+      lockNav(shell);
       bootVault();
       goRoom("vault", shell, false);
     });
@@ -85,17 +94,17 @@ export async function startApp(root: HTMLElement) {
   shell.navButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const room = btn.dataset.room as Room;
-      if ((room === "hall" || room === "den") && !unlocked) {
+      if (room !== "vault" && room !== "void" && !unlocked) {
         const msg = shell.vault.querySelector("#lockMsg");
         if (msg) {
-          msg.textContent = "HALL LOCKED // CLEAR VAULT FIRST";
+          msg.textContent = "ROOM LOCKED // CLEAR VAULT FIRST";
           msg.className = "msg bad";
         }
         goRoom("vault", shell, unlocked);
         return;
       }
       goRoom(room, shell, unlocked);
-      if (room === "den" && unlocked) void refreshDen();
+      void paintRoom(room);
     });
   });
 
