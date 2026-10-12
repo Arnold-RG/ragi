@@ -2,13 +2,16 @@
 
 Owner-only private secretary. **Public code. Private locks and secrets.**
 
-- **Web root (GitHub Pages):** [`web/`](./web/)
-- **Secure backend (32GB-class host):** [`backend/`](./backend/) — see [`backend/ARCHITECTURE.md`](./backend/ARCHITECTURE.md)
-- **Docker stack (Postgres + Redis + API):** [`docker-compose.yml`](./docker-compose.yml)
+Dark-age CRT chamber in the browser, Fastify vault on the wire. Three gates before anything opens.
 
-### Backend layers
+- **Web (CRT UI):** [`web/`](./web/) — Vite + TypeScript · Pages at `/ragi/`
+- **Backend:** [`backend/`](./backend/) — see [`backend/ARCHITECTURE.md`](./backend/ARCHITECTURE.md)
+- **Stack:** [`docker-compose.yml`](./docker-compose.yml) — Postgres · Redis · API · optional nginx web
+- **Route map:** [`web/api.md`](./web/api.md)
 
-`bootstrap` → `shared` (db/crypto/vault) → `modules` (auth, secretary, calendar, ai)
+### Layers
+
+`bootstrap` → `shared` (db/crypto/vault) → `modules` (auth, secretary, calendar, ai) · `web` talks only to `/api/v1/*` + `/health`
 
 ### Database
 
@@ -23,19 +26,30 @@ Owner-only private secretary. **Public code. Private locks and secrets.**
 
 Sessions are JWT + server-side session rows. Vault fields use AES-256-GCM. Audit log records every auth and AI call. Rate limits and lockouts apply.
 
-## Local backend (Windows)
+## Local full stack (Windows)
 
 ```powershell
+# Terminal 1 — API
 cd backend
 copy .env.example .env
-# fill RAGI_MASTER_KEY, RAGI_SESSION_SECRET, OWNER_* , optional GEMINI_API_KEY
+# fill RAGI_MASTER_KEY, RAGI_SESSION_SECRET, OWNER_* (quote OWNER_PASSPHRASE if it contains #), optional GEMINI_API_KEY
 npm install
 npx prisma db push
 npm run seed
 npm run dev
+
+# Terminal 2 — CRT chamber
+cd web
+copy .env.example .env
+npm install
+npm run dev
 ```
 
-Health: http://127.0.0.1:8787/health
+- API health: http://127.0.0.1:8787/health  
+- Chamber: http://127.0.0.1:4173/  
+- Docker all-in-one web: http://127.0.0.1:8080/ (after `docker compose up --build`)
+
+CORS allows local Vite (`4173`) and `https://arnold-rg.github.io`. Set repo variable `VITE_API_ORIGIN` for Pages builds that should hit your public API host.
 
 ## 32GB host
 

@@ -1,32 +1,17 @@
-# RAGI API map (backend)
+# RAGI web ↔ backend map
 
-Base: `http://127.0.0.1:8787` (local) or your API host.
+Default API: `VITE_API_ORIGIN` (local `http://127.0.0.1:8787`)
 
-## Public
-- `GET /health`
-- `GET /ready`
-- `POST /api/v1/auth/challenge`
-- `POST /api/v1/auth/gate/1`
-- `POST /api/v1/auth/gate/2`
-- `POST /api/v1/auth/gate/3`
-- `POST /api/v1/auth/webauthn/auth-options`
-- `GET /api/v1/calendar/google/callback`
-- `GET /api/v1/calendar/microsoft/callback`
+| UI action | Backend |
+|-----------|---------|
+| Unlock gate 1–3 | `POST /api/v1/auth/challenge` + `/gate/1|2|3` |
+| Session restore | `GET /api/v1/auth/me` |
+| Logout | `POST /api/v1/auth/logout` |
+| Work / Home | `GET|PUT /api/v1/mode` |
+| Dawn scroll | `GET /api/v1/briefing` |
+| Quest log | `GET|POST /api/v1/jobs` |
+| Focus block | `GET|POST /api/v1/focus` |
+| CAST / Hey Ragi | `POST /api/v1/ai/chat` |
+| API pill | `GET /health` |
 
-## Owner session required (triple seal)
-- `GET /api/v1/auth/me`
-- `POST /api/v1/auth/logout`
-- `GET|PUT /api/v1/mode`
-- `GET /api/v1/briefing`
-- `GET|POST /api/v1/jobs` · `PATCH /api/v1/jobs/:id`
-- `GET|POST /api/v1/focus` · `POST /api/v1/focus/:id/complete`
-- `GET|POST /api/v1/notes`
-- `GET /api/v1/export`
-- `GET /api/v1/calendar/status`
-- `GET /api/v1/calendar/google/start`
-- `GET /api/v1/calendar/microsoft/start`
-- `GET /api/v1/calendar/events?provider=google|microsoft`
-- `POST /api/v1/ai/chat`
-- WebAuthn register options/verify
-
-All sensitive note/job/focus/OAuth fields are AES-256-GCM encrypted at rest with a per-owner vault salt.
+Mic jump is local Web Audio → amber scribe sprite (no audio leaves the browser except when you CAST text to Gemini).

@@ -16,7 +16,15 @@ export async function registerPlugins(app: FastifyInstance) {
   await app.register(cors, {
     origin: (origin, cb) => {
       const allowed = new Set(
-        [env.RAGI_WEB_ORIGIN, env.RAGI_PUBLIC_ORIGIN, "http://127.0.0.1:8765", "http://localhost:8765"]
+        [
+          env.RAGI_WEB_ORIGIN,
+          env.RAGI_PUBLIC_ORIGIN,
+          "http://127.0.0.1:4173",
+          "http://localhost:4173",
+          "http://127.0.0.1:8765",
+          "http://localhost:8765",
+          "https://arnold-rg.github.io",
+        ]
           .filter(Boolean)
           .flatMap((o) => o.split(",").map((x) => x.trim())),
       );

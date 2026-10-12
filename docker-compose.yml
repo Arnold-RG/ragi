@@ -72,6 +72,18 @@ services:
         reservations:
           memory: 4G
 
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_ORIGIN: ${VITE_API_ORIGIN:-http://127.0.0.1:8787}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
 volumes:
   ragi_pg:
   ragi_redis:

@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "node --import tsx src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node --max-old-space-size=${RAGI_HEAP_MB:-28672} dist/server.js",
     "start:win": "node --max-old-space-size=28672 dist/server.js",
