@@ -1,8 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { FastifyRequest } from "fastify";
-import { env } from "../config.js";
-import { db } from "../lib/db.js";
-import { randomToken, sha256Hex } from "../lib/crypto.js";
+import { env } from "../../../shared/config.js";
+import { db } from "../../../shared/db.js";
+import { randomToken, sha256Hex } from "../../../shared/crypto.js";
 
 const secret = () => new TextEncoder().encode(env.RAGI_SESSION_SECRET);
 

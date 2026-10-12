@@ -1,9 +1,9 @@
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
-import { env } from "../config.js";
-import { db } from "../lib/db.js";
-import { encryptString, hashSecret, newSalt } from "../lib/crypto.js";
-import { logger } from "../lib/logger.js";
+import { env } from "../shared/config.js";
+import { db } from "../shared/db.js";
+import { encryptString, hashSecret, newSalt } from "../shared/crypto.js";
+import { logger } from "../shared/logger.js";
 
 async function main() {
   const passphrase = env.OWNER_PASSPHRASE;
@@ -23,7 +23,6 @@ async function main() {
   const vaultSalt = newSalt(24);
   const totpSecret = authenticator.generateSecret();
   const otpauth = authenticator.keyuri("owner", env.OWNER_TOTP_ISSUER, totpSecret);
-  const qr = await QRCode.toDataURL(otpauth);
 
   const owner = await db.owner.create({
     data: {
@@ -46,6 +45,7 @@ async function main() {
     ],
   });
 
+  const qr = await QRCode.toDataURL(otpauth);
   logger.info(
     {
       ownerId: owner.id,

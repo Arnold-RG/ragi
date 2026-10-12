@@ -1,4 +1,4 @@
-import { db } from "../lib/db.js";
+import { db } from "../shared/db.js";
 
 await db.session.deleteMany();
 await db.auditLog.deleteMany();

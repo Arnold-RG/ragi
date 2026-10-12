@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
-import { dbReady } from "../lib/db.js";
-import { cacheStats } from "../lib/redis.js";
-import { runtimeReport } from "../lib/memory.js";
-import { env } from "../config.js";
+import { dbReady } from "../../shared/db.js";
+import { cacheStats } from "../../shared/redis.js";
+import { runtimeReport } from "../../shared/memory.js";
+import { env } from "../../shared/config.js";
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get("/health", async () => {

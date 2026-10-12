@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { env } from "../config.js";
-import { audit } from "../security/audit.js";
-import { db } from "../lib/db.js";
+import { env } from "../../shared/config.js";
+import { audit } from "../../shared/security/audit.js";
+import { db } from "../../shared/db.js";
 
 export const aiRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.requireOwner);

@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { readSession, requireFullGates } from "../auth/session.js";
+import { readSession, requireFullGates } from "./lib/session.js";
 
 declare module "fastify" {
   interface FastifyRequest {

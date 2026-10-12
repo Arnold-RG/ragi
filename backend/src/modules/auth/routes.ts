@@ -1,9 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { authenticator } from "otplib";
-import { db } from "../lib/db.js";
-import { decryptString, verifySecret } from "../lib/crypto.js";
-import { audit } from "../security/audit.js";
+import { db } from "../../shared/db.js";
+import { decryptString, verifySecret } from "../../shared/crypto.js";
+import { audit } from "../../shared/security/audit.js";
 import {
   beginLoginChallenge,
   clearFails,
@@ -11,16 +11,16 @@ import {
   loadLoginChallenge,
   registerFail,
   saveLoginChallenge,
-} from "../auth/challenges.js";
-import { createSession, readSession, revokeSession, type GateId } from "../auth/session.js";
-import { env } from "../config.js";
+} from "./lib/challenges.js";
+import { createSession, readSession, revokeSession, type GateId } from "./lib/session.js";
+import { env } from "../../shared/config.js";
 import {
   authenticationOptions,
   registrationOptions,
   verifyAuthentication,
   verifyRegistration,
-} from "../auth/webauthn.js";
-import { cacheGet, cacheSet } from "../lib/redis.js";
+} from "./lib/webauthn.js";
+import { cacheGet, cacheSet } from "../../shared/redis.js";
 // cacheGet used for lockout + webauthn challenges
 
 function clientMeta(req: { ip: string; headers: Record<string, unknown> }) {

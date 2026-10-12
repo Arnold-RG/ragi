@@ -5,8 +5,8 @@ import {
   verifyAuthenticationResponse,
   type AuthenticatorTransportFuture,
 } from "@simplewebauthn/server";
-import { db } from "../lib/db.js";
-import { env } from "../config.js";
+import { db } from "../../../shared/db.js";
+import { env } from "../../../shared/config.js";
 
 export async function registrationOptions(ownerId: string) {
   const existing = await db.webAuthnCredential.findMany({ where: { ownerId } });

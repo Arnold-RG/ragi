@@ -1,9 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { env } from "../config.js";
-import { db } from "../lib/db.js";
-import { encryptString, decryptString, randomToken } from "../lib/crypto.js";
-import { cacheSet, cacheGet, cacheDel } from "../lib/redis.js";
+import { env } from "../../shared/config.js";
+import { db } from "../../shared/db.js";
+import { encryptString, decryptString, randomToken } from "../../shared/crypto.js";
+import { cacheSet, cacheGet, cacheDel } from "../../shared/redis.js";
 
 async function salt(ownerId: string) {
   return (await db.owner.findUniqueOrThrow({ where: { id: ownerId } })).vaultSalt;

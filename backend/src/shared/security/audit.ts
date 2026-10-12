@@ -1,5 +1,5 @@
-import { db } from "../lib/db.js";
-import { encryptString } from "../lib/crypto.js";
+import { db } from "../db.js";
+import { encryptString } from "../crypto.js";
 
 export async function audit(input: {
   ownerId?: string | null;

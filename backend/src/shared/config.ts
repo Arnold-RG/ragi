@@ -5,7 +5,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-loadEnv({ path: resolve(here, "../.env") });
+const backendRoot = resolve(here, "../..");
+loadEnv({ path: resolve(backendRoot, ".env") });
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -47,7 +48,7 @@ const schema = z.object({
 function ensureDataDir(databaseUrl: string) {
   if (!databaseUrl.startsWith("file:")) return;
   const rel = databaseUrl.replace(/^file:/, "");
-  const abs = resolve(here, "..", "prisma", rel.replace(/^\.\//, ""));
+  const abs = resolve(backendRoot, "prisma", rel.replace(/^\.\//, ""));
   mkdirSync(dirname(abs), { recursive: true });
 }
 
@@ -73,6 +74,6 @@ export function memoryProfile() {
     cacheBudgetMb: cache,
     workerThreads: env.RAGI_WORKER_THREADS,
     note: "Capacity for a 32GB+ host. Memory is allocated on demand, not pre-filled.",
-    dataDirReady: existsSync(resolve(here, "../prisma/data")) || true,
+    dataDirReady: existsSync(resolve(backendRoot, "prisma/data")),
   };
 }

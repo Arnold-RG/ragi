@@ -1,5 +1,5 @@
 import { availableParallelism } from "node:os";
-import { env, memoryProfile } from "../config.js";
+import { env, memoryProfile } from "./config.js";
 
 export function runtimeReport() {
   const mem = process.memoryUsage();

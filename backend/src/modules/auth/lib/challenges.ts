@@ -1,7 +1,7 @@
-import { db } from "../lib/db.js";
-import { encryptString, decryptString, newSalt, randomToken } from "../lib/crypto.js";
-import { env } from "../config.js";
-import { cacheGet, cacheSet, cacheDel, cacheIncr } from "../lib/redis.js";
+import { db } from "../../../shared/db.js";
+import { encryptString, decryptString, newSalt, randomToken } from "../../../shared/crypto.js";
+import { env } from "../../../shared/config.js";
+import { cacheGet, cacheSet, cacheDel, cacheIncr } from "../../../shared/redis.js";
 
 const challengeSalt = () => createChallengeSalt();
 

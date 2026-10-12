@@ -3,8 +3,17 @@
 Owner-only private secretary. **Public code. Private locks and secrets.**
 
 - **Web root (GitHub Pages):** [`web/`](./web/)
-- **Secure backend (32GB-class host):** [`backend/`](./backend/)
+- **Secure backend (32GB-class host):** [`backend/`](./backend/) — see [`backend/ARCHITECTURE.md`](./backend/ARCHITECTURE.md)
 - **Docker stack (Postgres + Redis + API):** [`docker-compose.yml`](./docker-compose.yml)
+
+### Backend layers
+
+`bootstrap` → `shared` (db/crypto/vault) → `modules` (auth, secretary, calendar, ai)
+
+### Database
+
+- Local: SQLite at `backend/prisma/data/ragi.db`
+- Production: PostgreSQL via Docker
 
 ## Security model
 

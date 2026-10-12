@@ -1,5 +1,5 @@
 import { Redis } from "ioredis";
-import { env } from "../config.js";
+import { env } from "./config.js";
 import { logger } from "./logger.js";
 
 type MemoryEntry = { value: string; expiresAt: number };

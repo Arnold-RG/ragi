@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import argon2 from "argon2";
-import { env } from "../config.js";
+import { env } from "./config.js";
 
 const ARGON = {
   type: argon2.argon2id,

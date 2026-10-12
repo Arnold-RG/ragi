@@ -1,9 +1,9 @@
-import { env } from "./config.js";
+import { env } from "./shared/config.js";
 import { buildApp } from "./app.js";
-import { initCache, closeCache } from "./lib/redis.js";
-import { db } from "./lib/db.js";
-import { logger } from "./lib/logger.js";
-import { runtimeReport } from "./lib/memory.js";
+import { initCache, closeCache } from "./shared/redis.js";
+import { db } from "./shared/db.js";
+import { logger } from "./shared/logger.js";
+import { runtimeReport } from "./shared/memory.js";
 
 async function main() {
   if (!process.env.NODE_OPTIONS?.includes("max-old-space-size") && env.RAGI_HEAP_MB >= 1024) {
@@ -34,6 +34,7 @@ async function main() {
     {
       url: `http://${env.RAGI_HOST}:${env.RAGI_PORT}`,
       runtime: runtimeReport(),
+      layers: ["bootstrap", "shared", "modules"],
     },
     "RAGI backend online",
   );
