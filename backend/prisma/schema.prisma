@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Sole owner account — RAGI is single-tenant by design.
+model Owner {
+  id                String   @id @default(cuid())
+  handle            String   @unique @default("owner")
+  passphraseHash    String
+  backupCodeHash    String
+  deviceKeyHash     String
+  totpSecretEnc     String?
+  totpVerified      Boolean  @default(false)
+  webauthnEnabled   Boolean  @default(false)
+  vaultSalt         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  credentials       WebAuthnCredential[]
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  notes             SecureNote[]
+  jobs              JobEntry[]
+  focusBlocks       FocusBlock[]
+  modeState         ModeState?
+  oauthTokens       OAuthToken[]
+  briefingCache     BriefingCache?
+}
+
+model WebAuthnCredential {
+  id              String   @id @default(cuid())
+  ownerId         String
+  credentialId    String   @unique
+  publicKey       String
+  counter         BigInt   @default(0)
+  transports      String   @default("[]")
+  deviceType      String   @default("unknown")
+  backedUp        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  lastUsedAt      DateTime?
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id              String   @id @default(cuid())
+  ownerId         String
+  tokenHash       String   @unique
+  gatesPassed     String   @default("[]")
+  ip              String?
+  userAgent       String?
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, expiresAt])
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  ownerId         String?
+  action          String
+  outcome         String
+  detailEnc       String?
+  ip              String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action, outcome])
+}
+
+model SecureNote {
+  id              String   @id @default(cuid())
+  ownerId         String
+  kind            String   @default("note")
+  titleEnc        String
+  bodyEnc         String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, kind])
+}
+
+model JobEntry {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  companyEnc      String?
+  status          String   @default("watch")
+  urlEnc          String?
+  notesEnc        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, status])
+}
+
+model FocusBlock {
+  id              String   @id @default(cuid())
+  ownerId         String
+  labelEnc        String
+  startsAt        DateTime
+  endsAt          DateTime
+  completed       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, startsAt])
+}
+
+model ModeState {
+  id              String   @id @default(cuid())
+  ownerId         String   @unique
+  mode            String   @default("work")
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model OAuthToken {
+  id              String   @id @default(cuid())
+  ownerId         String
+  provider        String
+  accessEnc       String
+  refreshEnc      String?
+  expiresAt       DateTime?
+  scope           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, provider])
+}
+
+model BriefingCache {
+  id              String   @id @default(cuid())
+  ownerId         String   @unique
+  payloadEnc      String
+  generatedAt     DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model AuthChallenge {
+  id              String   @id @default(cuid())
+  kind            String
+  payloadEnc      String
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([kind, expiresAt])
+}
+
+model SystemMeta {
+  key             String   @id
+  value           String
+  updatedAt       DateTime @updatedAt
+}
