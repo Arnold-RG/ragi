@@ -28,6 +28,24 @@ import { listGithubRepos, setGithubLogin, setGithubProgress } from "../api/githu
 import { ApiError } from "../api/client";
 import { esc, guard, meter, openRowEditor, say } from "./dom";
 
+function productivityStrip(dash: Dashboard) {
+  const done = dash.activitiesToday.filter((a) => a.done).length;
+  const total = dash.activitiesToday.length;
+  const calls = dash.meetingsUpcoming.length;
+  const dir =
+    dash.charts.direction === "forward"
+      ? "Moving forward"
+      : dash.charts.direction === "steady"
+        ? "Steady"
+        : "Needs attention";
+  return `<div class="board-strip" aria-label="Productivity">
+    <article class="board-metric"><p class="label">Project progress</p><p class="value">${dash.charts.projectAvgProgress}%</p><p class="note">Across ${dash.projects.length} projects</p></article>
+    <article class="board-metric"><p class="label">Daily tasks</p><p class="value">${done}/${total || 0}</p><p class="note">Done today</p></article>
+    <article class="board-metric"><p class="label">Calls & meetings</p><p class="value">${calls}</p><p class="note">Upcoming</p></article>
+    <article class="board-metric"><p class="label">Direction</p><p class="value" style="font-size:1.2rem">${esc(dir)}</p><p class="note">Goals avg ${dash.charts.goalAvgProgress}%</p></article>
+  </div>`;
+}
+
 function roomHead(_code: string, title: string, lore: string) {
   return `<header class="page-head">
       <h2 class="page-title" tabindex="-1">${esc(title)}</h2>
@@ -37,7 +55,7 @@ function roomHead(_code: string, title: string, lore: string) {
 }
 
 function cashChart(series: Dashboard["charts"]["cashSeries"]) {
-  if (!series.length) return `<p class="empty">No cash trace yet. Post an entry in Gold.</p>`;
+  if (!series.length) return `<p class="empty">No cash trend yet. Add an entry in Money.</p>`;
   const vals = series.map((s) => s.balance);
   const min = Math.min(...vals, 0);
   const max = Math.max(...vals, 1);
@@ -52,7 +70,7 @@ function cashChart(series: Dashboard["charts"]["cashSeries"]) {
   const label = `Cash from ${series[0].label} to ${series[series.length - 1].label}`;
   return `<svg class="cash-svg" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="${esc(label)}">
     <title>${esc(label)}</title>
-    <polyline fill="none" stroke="#c6a36a" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts}" />
+    <polyline fill="none" stroke="#1f6b4a" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts}" />
   </svg>`;
 }
 
@@ -82,75 +100,74 @@ export async function renderHome(root: HTMLElement) {
   root.innerHTML = `${roomHead("", "Today", "Loading your day…")}`;
   const dash = await loadDash(root);
   if (!dash) return;
-  const focus = dash.focusActive
-    ? `${esc(dash.focusActive.label)} until ${esc(new Date(dash.focusActive.endsAt).toLocaleTimeString())}`
-    : "None";
   const hour = new Date().getHours();
   const hello = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const topProjects = [...dash.projects].sort((a, b) => b.progress - a.progress).slice(0, 4);
 
   root.innerHTML = `
-    ${roomHead("", "Today", `${hello}. Here’s a clear view of your day · mode: <strong>${esc(dash.mode)}</strong>`)}
-    <div class="dash-grid">
-      <section class="stat-box">
-        <h3>At a glance</h3>
-        <ul class="kpi">
-          <li><span>Projects</span><b>${dash.projects.length}</b></li>
-          <li><span>Goals</span><b>${dash.goals.length}</b></li>
-          <li><span>Today</span><b>${dash.activitiesToday.filter((a) => a.done).length}/${dash.activitiesToday.length}</b></li>
-          <li><span>Meetings</span><b>${dash.meetingsUpcoming.length}</b></li>
-          <li><span>Reminders</span><b>${dash.reminders.length}</b></li>
-          <li><span>Emergencies</span><b>${dash.emergencies.filter((e) => e.active).length}</b></li>
-          <li><span>Quests</span><b>${dash.openJobs}</b></li>
-          <li><span>Cash</span><b>${money(dash.finance.balanceCents)}</b></li>
-          <li><span>Focus</span><b>${focus}</b></li>
-        </ul>
-      </section>
-      <section class="stat-box">
-        <h3>Speed</h3>
+    ${roomHead("", "Today", `${hello}. Your day board for tasks, calls, and project momentum.`)}
+    <div class="board">
+      ${productivityStrip(dash)}
+
+      <div class="two-col">
+        <section class="board-section" style="border-top:0;padding-top:0">
+          <div class="board-section-head">
+            <h3>Daily tasks</h3>
+            <p>Check off what you finish</p>
+          </div>
+          <ul class="jobs" id="homeActs">
+            ${
+              dash.activitiesToday.length
+                ? dash.activitiesToday
+                    .map(
+                      (a) =>
+                        `<li class="entry"><div class="entry-copy"><p class="entry-title">${a.done ? "✓ " : ""}${esc(a.title)}</p></div>
+                        <div class="acts"><button type="button" class="ghost" data-act="${esc(a.id)}">${a.done ? "Undo" : "Done"}</button></div></li>`,
+                    )
+                    .join("")
+                : `<li class="entry is-empty"><p class="entry-title">No tasks yet — add one below.</p></li>`
+            }
+          </ul>
+          <form class="inline-form" id="homeActForm">
+            <label class="field"><span>New task</span><input id="homeActTitle" maxlength="160" autocomplete="off" placeholder="Call supplier, ship draft…" /></label>
+            <button type="submit" class="primary">Add</button>
+          </form>
+        </section>
+
+        <section class="board-section" style="border-top:0;padding-top:0">
+          <div class="board-section-head">
+            <h3>Calls & meetings</h3>
+            <p>Next on your schedule</p>
+          </div>
+          <ul class="jobs">
+            ${
+              dash.meetingsUpcoming.length
+                ? dash.meetingsUpcoming
+                    .slice(0, 6)
+                    .map(
+                      (m) =>
+                        `<li class="entry"><div class="entry-copy"><p class="entry-title">${esc(m.title)}</p><p class="entry-meta">${esc(new Date(m.startsAt).toLocaleString())}${m.place ? ` · ${esc(m.place)}` : ""}</p></div></li>`,
+                    )
+                    .join("")
+                : `<li class="entry is-empty"><p class="entry-title">Nothing booked. Add calls in Schedule.</p></li>`
+            }
+          </ul>
+          <p class="hint" style="margin-top:0.85rem">Cash on hand: <strong>${money(dash.finance.balanceCents)}</strong></p>
+        </section>
+      </div>
+
+      <section class="board-section">
+        <div class="board-section-head">
+          <h3>Project productivity</h3>
+          <p>Top personal / work projects</p>
+        </div>
         ${
-          dash.charts.speedBars.length
-            ? dash.charts.speedBars.map((b) => meter(b.label, b.value, b.realm)).join("")
-            : `<p class="empty">Add projects in the Forge to draw the bars.</p>`
+          topProjects.length
+            ? topProjects.map((p) => meter(p.title, p.progress, p.realm)).join("")
+            : `<p class="empty">Create projects in Work to track productivity here.</p>`
         }
       </section>
-      <section class="stat-box wide">
-        <h3>Direction</h3>
-        ${directionMap(dash)}
-      </section>
-      <section class="stat-box">
-        <h3>Today</h3>
-        <ul class="jobs" id="homeActs">
-          ${
-            dash.activitiesToday.length
-              ? dash.activitiesToday
-                  .map(
-                    (a) =>
-                      `<li class="entry"><div class="entry-copy"><p class="entry-title">${a.done ? "Done · " : ""}${esc(a.title)}</p></div>
-                      <div class="acts"><button type="button" class="ghost" data-act="${esc(a.id)}">${a.done ? "Undo" : "Done"}</button></div></li>`,
-                  )
-                  .join("")
-              : `<li class="entry is-empty"><p class="entry-title">Nothing planned for today.</p></li>`
-          }
-        </ul>
-      </section>
-      <section class="stat-box">
-        <h3>Next meetings</h3>
-        <ul class="jobs">
-          ${
-            dash.meetingsUpcoming.length
-              ? dash.meetingsUpcoming
-                  .slice(0, 5)
-                  .map(
-                    (m) =>
-                      `<li class="entry"><div class="entry-copy"><p class="entry-title">${esc(m.title)}</p><p class="entry-meta">${esc(new Date(m.startsAt).toLocaleString())}</p></div></li>`,
-                  )
-                  .join("")
-              : `<li class="entry is-empty"><p class="entry-title">The calendar is clear.</p></li>`
-          }
-        </ul>
-      </section>
     </div>
-    <p class="hint">Forge holds projects and goals. Gold is the ledger. Clock keeps meetings. Map draws the charts.</p>
   `;
 
   root.querySelectorAll<HTMLButtonElement>("[data-act]").forEach((btn) => {
@@ -161,6 +178,16 @@ export async function renderHome(root: HTMLElement) {
       });
     });
   });
+
+  root.querySelector("#homeActForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const title = (root.querySelector("#homeActTitle") as HTMLInputElement).value.trim();
+    if (!title) return say(root, "Name the task first.", "bad");
+    void guard(root, async () => {
+      await createActivity({ title });
+      await renderHome(root);
+    });
+  });
 }
 
 export async function renderForge(root: HTMLElement) {
@@ -168,84 +195,159 @@ export async function renderForge(root: HTMLElement) {
   const dash = await loadDash(root);
   if (!dash) return;
 
+  let ghBlock = `<p class="quiet">Connect a GitHub username below to track public repositories.</p>
+    <form class="inline-form" id="ghLoginForm">
+      <label class="field"><span>GitHub username</span><input id="ghLogin" maxlength="39" autocomplete="off" spellcheck="false" placeholder="your-github" /></label>
+      <button type="submit" class="primary">Connect</button>
+    </form>`;
+  try {
+    const gh = await listGithubRepos();
+    if (!gh.needsLogin && gh.login) {
+      ghBlock = `
+        <div class="board-section-head">
+          <h3>GitHub repositories</h3>
+          <p>${esc(gh.login)} · avg ${gh.avgProgress}% done</p>
+        </div>
+        <form class="inline-form" id="ghLoginForm">
+          <label class="field"><span>GitHub username</span><input id="ghLogin" value="${esc(gh.login)}" maxlength="39" autocomplete="off" spellcheck="false" /></label>
+          <button type="submit" class="ghost">Update</button>
+        </form>
+        <ul class="jobs gh-list" style="margin-top:0.75rem">
+          ${
+            gh.projects.length
+              ? gh.projects
+                  .slice(0, 8)
+                  .map(
+                    (p) => `<li class="gh-row">
+                      <div class="gh-head">
+                        <a href="${esc(p.url)}" target="_blank" rel="noreferrer">${esc(p.name)}</a>
+                        <span>${p.progress}% done · ${p.remaining}% left</span>
+                      </div>
+                      ${meter(p.name, p.progress)}
+                      <p class="gh-meta">${esc(p.language || "No language")} · ${esc((p.description || "").slice(0, 100))}</p>
+                      <form class="inline-form" data-ghprog="${esc(p.fullName)}">
+                        <label class="field"><span>Set % done</span><input type="number" min="0" max="100" value="${p.progress}" /></label>
+                        <button type="submit" class="ghost">Save</button>
+                      </form>
+                    </li>`,
+                  )
+                  .join("")
+              : `<li class="entry is-empty"><p class="entry-title">No public repositories found.</p></li>`
+          }
+        </ul>`;
+    }
+  } catch {
+    ghBlock = `<p class="msg bad">GitHub is unreachable from this session. You can still manage personal projects below.</p>`;
+  }
+
   root.innerHTML = `
-    ${roomHead("", "Work", "Projects, goals, and your day tasks.")}
-    <div class="dash-grid">
-      <section class="stat-box">
-        <h3>Projects</h3>
-        <ul class="jobs" id="projList">
-          ${
-            dash.projects.length
-              ? dash.projects
-                  .map(
-                    (p) =>
-                      `<li class="entry" data-id="${esc(p.id)}"><div class="entry-copy"><p class="entry-title">${esc(p.title)}</p><p class="entry-meta">${esc(p.realm)} · ${p.progress}%</p>${p.notes ? `<p class="entry-note">${esc(p.notes)}</p>` : ""}</div>
-                      <div class="acts">
-                        <button type="button" class="ghost" data-bump="${esc(p.id)}" data-p="${Math.min(100, p.progress + 10)}">+10</button>
-                        <button type="button" class="ghost" data-pedit="${esc(p.id)}">Edit</button>
-                        <button type="button" class="ghost" data-pdel="${esc(p.id)}">Archive</button>
-                      </div></li>`,
-                  )
-                  .join("")
-              : `<li class="entry is-empty"><p class="entry-title">No projects yet.</p></li>`
-          }
-        </ul>
-        <form class="stack" id="projForm">
-          <label class="field"><span>Title</span><input id="projTitle" maxlength="160" autocomplete="off" /></label>
-          <label class="field"><span>Notes</span><input id="projNotes" maxlength="2000" autocomplete="off" /></label>
-          <label class="field"><span>Realm</span><select id="projRealm"><option value="personal">Personal</option><option value="work">Work</option></select></label>
-          <label class="field"><span>Progress</span><input id="projProgress" type="number" min="0" max="100" value="0" inputmode="numeric" /></label>
-          <button type="submit" class="primary">Seal project</button>
-        </form>
+    ${roomHead("", "Work", "Personal projects, productivity, GitHub repos, and the tasks that move them.")}
+    <div class="board">
+      ${productivityStrip(dash)}
+      <section class="board-section">
+        <div class="board-section-head">
+          <h3>Productivity dashboard</h3>
+          <p>Project speed by realm</p>
+        </div>
+        ${
+          dash.charts.speedBars.length
+            ? dash.charts.speedBars.map((b) => meter(b.label, b.value, b.realm)).join("")
+            : `<p class="empty">Add projects to see productivity bars.</p>`
+        }
+        <div style="margin-top:0.85rem">${directionMap(dash)}</div>
       </section>
-      <section class="stat-box">
-        <h3>Goals</h3>
-        <ul class="jobs" id="goalList">
-          ${
-            dash.goals.length
-              ? dash.goals
-                  .map(
-                    (g) =>
-                      `<li class="entry"><div class="entry-copy"><p class="entry-title">${esc(g.title)}</p><p class="entry-meta">${g.progress}%${g.target ? ` · ${esc(g.target)}` : ""}</p></div>
-                      <div class="acts">
-                        <button type="button" class="ghost" data-gedit="${esc(g.id)}">Edit</button>
-                        <button type="button" class="ghost" data-gdel="${esc(g.id)}">Archive</button>
-                      </div></li>`,
-                  )
-                  .join("")
-              : `<li class="entry is-empty"><p class="entry-title">No goals yet.</p></li>`
-          }
-        </ul>
-        <form class="stack" id="goalForm">
-          <label class="field"><span>Goal</span><input id="goalTitle" maxlength="160" autocomplete="off" /></label>
-          <label class="field"><span>Target</span><input id="goalTarget" maxlength="240" autocomplete="off" /></label>
-          <label class="field"><span>Realm</span><select id="goalRealm"><option value="personal">Personal</option><option value="work">Work</option></select></label>
-          <button type="submit" class="primary">Set goal</button>
-        </form>
-      </section>
-      <section class="stat-box wide">
-        <h3>Today</h3>
+
+      <div class="two-col">
+        <section class="board-section">
+          <div class="board-section-head">
+            <h3>Personal & work projects</h3>
+            <p>${dash.projects.length} active</p>
+          </div>
+          <ul class="jobs" id="projList">
+            ${
+              dash.projects.length
+                ? dash.projects
+                    .map(
+                      (p) =>
+                        `<li class="entry" data-id="${esc(p.id)}"><div class="entry-copy"><p class="entry-title">${esc(p.title)}</p><p class="entry-meta">${esc(p.realm)} · ${p.progress}%</p>${p.notes ? `<p class="entry-note">${esc(p.notes)}</p>` : ""}</div>
+                        <div class="acts">
+                          <button type="button" class="ghost" data-bump="${esc(p.id)}" data-p="${Math.min(100, p.progress + 10)}">+10%</button>
+                          <button type="button" class="ghost" data-pedit="${esc(p.id)}">Edit</button>
+                          <button type="button" class="ghost" data-pdel="${esc(p.id)}">Archive</button>
+                        </div></li>`,
+                    )
+                    .join("")
+                : `<li class="entry is-empty"><p class="entry-title">No projects yet.</p></li>`
+            }
+          </ul>
+          <form class="stack" id="projForm" style="margin-top:0.85rem">
+            <label class="field"><span>Project title</span><input id="projTitle" maxlength="160" autocomplete="off" /></label>
+            <label class="field"><span>Notes</span><input id="projNotes" maxlength="2000" autocomplete="off" /></label>
+            <label class="field"><span>Type</span><select id="projRealm"><option value="personal">Personal</option><option value="work">Work</option></select></label>
+            <label class="field"><span>Progress %</span><input id="projProgress" type="number" min="0" max="100" value="0" inputmode="numeric" /></label>
+            <button type="submit" class="primary">Add project</button>
+          </form>
+        </section>
+
+        <section class="board-section">
+          <div class="board-section-head">
+            <h3>Goals</h3>
+            <p>Targets that guide the week</p>
+          </div>
+          <ul class="jobs" id="goalList">
+            ${
+              dash.goals.length
+                ? dash.goals
+                    .map(
+                      (g) =>
+                        `<li class="entry"><div class="entry-copy"><p class="entry-title">${esc(g.title)}</p><p class="entry-meta">${g.progress}%${g.target ? ` · ${esc(g.target)}` : ""}</p></div>
+                        <div class="acts">
+                          <button type="button" class="ghost" data-gedit="${esc(g.id)}">Edit</button>
+                          <button type="button" class="ghost" data-gdel="${esc(g.id)}">Archive</button>
+                        </div></li>`,
+                    )
+                    .join("")
+                : `<li class="entry is-empty"><p class="entry-title">No goals yet.</p></li>`
+            }
+          </ul>
+          <form class="stack" id="goalForm" style="margin-top:0.85rem">
+            <label class="field"><span>Goal</span><input id="goalTitle" maxlength="160" autocomplete="off" /></label>
+            <label class="field"><span>Target</span><input id="goalTarget" maxlength="240" autocomplete="off" /></label>
+            <label class="field"><span>Type</span><select id="goalRealm"><option value="personal">Personal</option><option value="work">Work</option></select></label>
+            <button type="submit" class="primary">Add goal</button>
+          </form>
+        </section>
+      </div>
+
+      <section class="board-section">
+        <div class="board-section-head">
+          <h3>Daily tasks</h3>
+          <p>What you will finish today</p>
+        </div>
         <ul class="jobs">
           ${
             dash.activitiesToday.length
               ? dash.activitiesToday
                   .map(
                     (a) =>
-                      `<li class="entry"><div class="entry-copy"><p class="entry-title">${a.done ? "Done · " : ""}${esc(a.title)}</p></div>
+                      `<li class="entry"><div class="entry-copy"><p class="entry-title">${a.done ? "✓ " : ""}${esc(a.title)}</p></div>
                       <div class="acts">
                         <button type="button" class="ghost" data-act="${esc(a.id)}">${a.done ? "Undo" : "Done"}</button>
                         <button type="button" class="ghost" data-adel="${esc(a.id)}">Archive</button>
                       </div></li>`,
                   )
                   .join("")
-              : `<li class="entry is-empty"><p class="entry-title">The day is empty.</p></li>`
+              : `<li class="entry is-empty"><p class="entry-title">No tasks yet.</p></li>`
           }
         </ul>
         <form class="inline-form" id="actForm">
-          <label class="field"><span>Activity</span><input id="actTitle" maxlength="160" autocomplete="off" /></label>
+          <label class="field"><span>Task</span><input id="actTitle" maxlength="160" autocomplete="off" /></label>
           <button type="submit" class="primary">Add</button>
         </form>
-        <p class="hint">Archive seals a snapshot first. The row stays in vault memory.</p>
+      </section>
+
+      <section class="board-section">
+        ${ghBlock}
       </section>
     </div>
   `;
@@ -304,7 +406,7 @@ export async function renderForge(root: HTMLElement) {
 
   root.querySelectorAll<HTMLButtonElement>("[data-pdel]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (!window.confirm("Archive this project? A snapshot is sealed first.")) return;
+      if (!window.confirm("Archive this project?")) return;
       void guard(root, async () => {
         await deleteProject(btn.dataset.pdel!);
         await renderForge(root);
@@ -339,7 +441,7 @@ export async function renderForge(root: HTMLElement) {
 
   root.querySelectorAll<HTMLButtonElement>("[data-gdel]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (!window.confirm("Archive this goal? A snapshot is sealed first.")) return;
+      if (!window.confirm("Archive this goal?")) return;
       void guard(root, async () => {
         await deleteGoal(btn.dataset.gdel!);
         await renderForge(root);
@@ -389,6 +491,28 @@ export async function renderForge(root: HTMLElement) {
       });
     });
   });
+
+  root.querySelector("#ghLoginForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const login = (root.querySelector("#ghLogin") as HTMLInputElement).value.trim();
+    if (!login) return say(root, "Enter a GitHub username.", "bad");
+    void guard(root, async () => {
+      await setGithubLogin(login);
+      await renderForge(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLFormElement>("[data-ghprog]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const fullName = form.dataset.ghprog!;
+      const progress = Number((form.querySelector("input") as HTMLInputElement).value);
+      void guard(root, async () => {
+        await setGithubProgress(fullName, Math.max(0, Math.min(100, Math.round(progress) || 0)));
+        await renderForge(root);
+      });
+    });
+  });
 }
 
 export async function renderGold(root: HTMLElement) {
@@ -398,25 +522,27 @@ export async function renderGold(root: HTMLElement) {
   const f = dash.finance;
 
   root.innerHTML = `
-    ${roomHead("", "Money", "Income, spending, and what is left.")}
-    <div class="dash-grid">
-      <section class="stat-box">
-        <h3>Balance</h3>
-        <ul class="kpi">
-          <li><span>Income</span><b>${money(f.incomeCents)}</b></li>
-          <li><span>Expense</span><b>${money(f.expenseCents)}</b></li>
-          <li><span>Balance</span><b>${money(f.balanceCents)}</b></li>
-        </ul>
+    ${roomHead("", "Money", "Track income, spending, and what you have left.")}
+    <div class="board">
+      <div class="board-strip">
+        <article class="board-metric"><p class="label">Income</p><p class="value">${money(f.incomeCents)}</p><p class="note">Recorded in</p></article>
+        <article class="board-metric"><p class="label">Spent</p><p class="value">${money(f.expenseCents)}</p><p class="note">Recorded out</p></article>
+        <article class="board-metric"><p class="label">Balance</p><p class="value">${money(f.balanceCents)}</p><p class="note">What remains</p></article>
+        <article class="board-metric"><p class="label">Entries</p><p class="value">${f.recent.length}</p><p class="note">Recent rows</p></article>
+      </div>
+    <div class="two-col">
+      <section class="board-section" style="border-top:0;padding-top:0.5rem">
+        <div class="board-section-head"><h3>Add entry</h3><p>Income or expense</p></div>
         <form class="stack" id="finForm">
-          <label class="field"><span>Kind</span><select id="finKind"><option value="income">Income</option><option value="expense">Expense</option><option value="budget">Budget</option></select></label>
+          <label class="field"><span>Type</span><select id="finKind"><option value="income">Income</option><option value="expense">Expense</option><option value="budget">Budget</option></select></label>
           <label class="field"><span>Amount</span><input id="finAmount" type="number" step="0.01" min="0" inputmode="decimal" /></label>
           <label class="field"><span>Label</span><input id="finLabel" maxlength="160" autocomplete="off" /></label>
           <label class="field"><span>Category</span><input id="finCat" maxlength="80" autocomplete="off" /></label>
-          <button type="submit" class="primary">Post entry</button>
+          <button type="submit" class="primary">Save entry</button>
         </form>
       </section>
-      <section class="stat-box">
-        <h3>Recent</h3>
+      <section class="board-section" style="border-top:0;padding-top:0.5rem">
+        <div class="board-section-head"><h3>Recent</h3><p>Latest money moves</p></div>
         <ul class="jobs">
           ${
             f.recent.length
@@ -430,14 +556,15 @@ export async function renderGold(root: HTMLElement) {
                       </div></li>`,
                   )
                   .join("")
-              : `<li class="entry is-empty"><p class="entry-title">The ledger is empty.</p></li>`
+              : `<li class="entry is-empty"><p class="entry-title">No entries yet.</p></li>`
           }
         </ul>
       </section>
-      <section class="stat-box wide">
-        <h3>Cash trace</h3>
-        <div class="cash-wrap">${cashChart(dash.charts.cashSeries)}</div>
-      </section>
+    </div>
+    <section class="board-section">
+      <div class="board-section-head"><h3>Cash trend</h3><p>Balance over recent entries</p></div>
+      <div class="cash-wrap tall">${cashChart(dash.charts.cashSeries)}</div>
+    </section>
     </div>
   `;
 
@@ -467,7 +594,7 @@ export async function renderGold(root: HTMLElement) {
 
   root.querySelectorAll<HTMLButtonElement>("[data-fdel]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (!window.confirm("Archive this entry? A snapshot is sealed first.")) return;
+      if (!window.confirm("Archive this entry?")) return;
       void guard(root, async () => {
         await deleteFinance(btn.dataset.fdel!);
         await renderGold(root);
@@ -498,10 +625,17 @@ export async function renderClock(root: HTMLElement) {
   if (!dash) return;
 
   root.innerHTML = `
-    ${roomHead("", "Schedule", "Meetings, reminders, and plans.")}
+    ${roomHead("", "Schedule", "Manage calls, meetings, and reminders in one place.")}
+    <div class="board">
+      <div class="board-strip">
+        <article class="board-metric"><p class="label">Upcoming calls</p><p class="value">${dash.meetingsUpcoming.length}</p><p class="note">Meetings booked</p></article>
+        <article class="board-metric"><p class="label">Reminders</p><p class="value">${dash.reminders.length}</p><p class="note">Open items</p></article>
+        <article class="board-metric"><p class="label">Urgent plans</p><p class="value">${dash.emergencies.filter((e) => e.active).length}</p><p class="note">Needs attention</p></article>
+        <article class="board-metric"><p class="label">Tasks today</p><p class="value">${dash.activitiesToday.filter((a) => !a.done).length}</p><p class="note">Still open</p></article>
+      </div>
     <div class="dash-grid">
       <section class="stat-box">
-        <h3>Meetings</h3>
+        <h3>Calls & meetings</h3>
         <ul class="jobs">
           ${
             dash.meetingsUpcoming.length
@@ -570,9 +704,10 @@ export async function renderClock(root: HTMLElement) {
           <label class="field"><span>Title</span><input id="emTitle" maxlength="160" autocomplete="off" /></label>
           <label class="field"><span>Protocol</span><input id="emBody" maxlength="2000" autocomplete="off" /></label>
           <label class="field"><span>Severity</span><select id="emSev"><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></label>
-          <button type="submit" class="primary">Arm plan</button>
+          <button type="submit" class="primary">Save plan</button>
         </form>
       </section>
+    </div>
     </div>
   `;
 

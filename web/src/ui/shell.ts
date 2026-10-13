@@ -28,12 +28,12 @@ const TITLES: Record<Room, string> = {
 };
 
 const NAV: Array<{ room: Room; label: string; hint: string }> = [
-  { room: "home", label: "Today", hint: "Overview" },
-  { room: "hall", label: "Ask", hint: "Chat with RAGI" },
-  { room: "forge", label: "Work", hint: "Projects & jobs" },
-  { room: "gold", label: "Money", hint: "Cash & spend" },
-  { room: "clock", label: "Schedule", hint: "Meetings & time" },
-  { room: "den", label: "Notes", hint: "Notes & account" },
+  { room: "home", label: "Today", hint: "Day board" },
+  { room: "hall", label: "Ask", hint: "Talk to RAGI" },
+  { room: "forge", label: "Work", hint: "Projects & GitHub" },
+  { room: "gold", label: "Money", hint: "Cash flow" },
+  { room: "clock", label: "Schedule", hint: "Calls & meetings" },
+  { room: "den", label: "Notes", hint: "Private notes" },
 ];
 
 function navButton(item: (typeof NAV)[number], opts?: { here?: boolean }) {
@@ -77,10 +77,6 @@ export function renderShell(root: HTMLElement) {
     <div class="app-layout">
       <nav class="app-nav" aria-label="Main" hidden>
         ${NAV.map((item, i) => navButton(item, { here: i === 0 })).join("")}
-        <button type="button" data-room="hub" class="app-nav-btn app-nav-more" disabled>
-          <span class="app-nav-label">GitHub</span>
-          <span class="app-nav-hint">Repos</span>
-        </button>
       </nav>
 
       <main class="app-main" id="chamber" tabindex="-1">
@@ -94,42 +90,37 @@ export function renderShell(root: HTMLElement) {
         <section id="roomMap" class="view" aria-label="Progress" hidden></section>
         <section id="roomDen" class="view" aria-label="Notes">
           <header class="page-head">
-            <h2 class="page-title" tabindex="-1">Notes & account</h2>
-            <p class="page-sub">Save notes, back up your vault, or change your password.</p>
+            <h2 class="page-title" tabindex="-1">Notes</h2>
+            <p class="page-sub">Ideas, people, and follow-ups — kept private to your account.</p>
           </header>
           <p class="msg" data-room-msg role="status"></p>
-          <div class="dash-grid">
-            <section class="stat-box wide">
-              <h3>Notes</h3>
-              <ul class="jobs" id="noteList"><li class="entry is-empty"><p class="entry-title">Sign in to read your notes.</p></li></ul>
-              <form class="stack" id="noteForm">
-                <label class="field"><span>Title</span><input id="noteTitle" name="title" autocomplete="off" maxlength="160" /></label>
-                <label class="field"><span>Note</span><textarea id="noteBody" name="body" maxlength="8000"></textarea></label>
-                <button type="submit" id="noteAdd" class="primary">Save note</button>
-              </form>
-            </section>
-            <section class="stat-box">
-              <h3>Backup</h3>
-              <div id="storeStatus" class="quiet">Loading…</div>
-              <div class="form-actions">
-                <button type="button" id="snapBtn" class="primary">Save snapshot</button>
-                <button type="button" id="exportBtn" class="ghost">Export JSON</button>
-              </div>
-            </section>
-            <section class="stat-box">
-              <h3>Snapshots</h3>
-              <ul class="jobs" id="snapList"><li class="entry is-empty"><p class="entry-title">None yet.</p></li></ul>
-            </section>
-            <section class="stat-box wide">
-              <h3>Change password</h3>
-              <p class="hint">If you forgot it, use Forgot password on the sign-in screen with your recovery key.</p>
-              <form class="stack" id="passwordForm">
-                <label class="field"><span>Current password</span><input id="pwCurrent" type="password" autocomplete="current-password" required minlength="1" maxlength="128" /></label>
-                <label class="field"><span>New password</span><input id="pwNew" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
-                <label class="field"><span>Confirm new password</span><input id="pwNew2" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
-                <button type="submit" class="primary">Update password</button>
-              </form>
-            </section>
+          <div class="board">
+            <div class="two-col">
+              <section class="board-section" style="border-top:0;padding-top:0">
+                <div class="board-section-head">
+                  <h3>Your notes</h3>
+                  <p>Write freely</p>
+                </div>
+                <ul class="jobs" id="noteList"><li class="entry is-empty"><p class="entry-title">Sign in to read your notes.</p></li></ul>
+                <form class="stack" id="noteForm" style="margin-top:1rem">
+                  <label class="field"><span>Title</span><input id="noteTitle" name="title" autocomplete="off" maxlength="160" /></label>
+                  <label class="field"><span>Note</span><textarea id="noteBody" name="body" maxlength="8000" rows="5"></textarea></label>
+                  <button type="submit" id="noteAdd" class="primary">Save note</button>
+                </form>
+              </section>
+              <section class="board-section" style="border-top:0;padding-top:0">
+                <div class="board-section-head">
+                  <h3>Account</h3>
+                  <p>Password only</p>
+                </div>
+                <form class="stack" id="passwordForm">
+                  <label class="field"><span>Current password</span><input id="pwCurrent" type="password" autocomplete="current-password" required minlength="1" maxlength="128" /></label>
+                  <label class="field"><span>New password</span><input id="pwNew" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
+                  <label class="field"><span>Confirm new password</span><input id="pwNew2" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
+                  <button type="submit" class="primary">Update password</button>
+                </form>
+              </section>
+            </div>
           </div>
         </section>
         <section class="dead-end" id="voidMsg" hidden></section>
@@ -168,6 +159,7 @@ export type ShellParts = ReturnType<typeof renderShell>;
 
 export function setGateMode(parts: ShellParts, gate: boolean) {
   document.body.classList.toggle("is-gate", gate);
+  document.body.classList.toggle("is-app", !gate);
   parts.root.classList.toggle("is-gate", gate);
   parts.root.classList.toggle("is-app", !gate);
   parts.nav.hidden = gate;

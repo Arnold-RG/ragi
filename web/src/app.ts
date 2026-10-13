@@ -1,13 +1,6 @@
 import { pingHealth } from "./api/client";
 import { changePassword, logout, me } from "./api/auth";
 import { createNote, listNotes } from "./api/secretary";
-import {
-  exportVault,
-  listSnapshots,
-  restoreSnapshot,
-  storageStatus,
-  takeSnapshot,
-} from "./api/storage";
 import { isUnlocked, clearSession, getSessionMeta, getToken } from "./state/session";
 import { isLocalToken } from "./vault/localAuth";
 import { goRoom, lockNav, renderShell, setApiPill, setGateMode, unlockNav, type Room } from "./ui/shell";
@@ -48,9 +41,7 @@ export async function startApp(root: HTMLElement) {
   async function refreshDen() {
     if (!unlocked) return;
     const list = shell.den.querySelector("#noteList");
-    const storeStatus = shell.den.querySelector("#storeStatus");
-    const snapList = shell.den.querySelector("#snapList");
-    if (!list || !storeStatus || !snapList) return;
+    if (!list) return;
 
     try {
       const res = await listNotes();
@@ -59,10 +50,10 @@ export async function startApp(root: HTMLElement) {
       if (!res.notes.length) {
         const empty = document.createElement("li");
         empty.className = "entry is-empty";
-        empty.innerHTML = `<p class="entry-title">No notes yet.</p>`;
+        empty.innerHTML = `<p class="entry-title">No notes yet — write one below.</p>`;
         list.append(empty);
       } else {
-        for (const note of res.notes.slice(0, 8)) {
+        for (const note of res.notes.slice(0, 40)) {
           const li = document.createElement("li");
           li.className = "entry";
           const copy = document.createElement("div");
@@ -102,7 +93,7 @@ export async function startApp(root: HTMLElement) {
           del.className = "ghost";
           del.textContent = "Archive";
           del.addEventListener("click", () => {
-            if (!window.confirm("Archive this note? A snapshot is sealed first.")) return;
+            if (!window.confirm("Archive this note?")) return;
             void guard(shell.den, async () => {
               await deleteNote(note.id);
               await refreshDen();
@@ -117,74 +108,8 @@ export async function startApp(root: HTMLElement) {
       list.replaceChildren();
       const li = document.createElement("li");
       li.className = "entry is-empty";
-      li.innerHTML = `<p class="entry-title">The ledger is unreachable.</p>`;
+      li.innerHTML = `<p class="entry-title">Notes are unreachable right now.</p>`;
       list.append(li);
-    }
-
-    try {
-      const st = await storageStatus();
-      const latest = st.latestSnapshot
-        ? `${st.latestSnapshot.id} · ${new Date(st.latestSnapshot.createdAt).toLocaleString()}`
-        : "None yet";
-      storeStatus.replaceChildren();
-      const lines = [
-        `Engine ${st.engine}`,
-        `Durable ${st.durable ? "yes" : "no"}`,
-        `Snapshots ${st.snapshotCount}`,
-        `Latest ${latest}`,
-        st.note,
-      ];
-      for (const line of lines) {
-        const p = document.createElement("p");
-        p.textContent = line;
-        storeStatus.append(p);
-      }
-      const snaps = await listSnapshots();
-      snapList.replaceChildren();
-      if (!snaps.snapshots.length) {
-        const li = document.createElement("li");
-        li.className = "entry is-empty";
-        li.innerHTML = `<p class="entry-title">No snapshots yet.</p>`;
-        snapList.append(li);
-      } else {
-        for (const snap of snaps.snapshots.slice(0, 8)) {
-          const li = document.createElement("li");
-          li.className = "entry";
-          const copy = document.createElement("div");
-          copy.className = "entry-copy";
-          const title = document.createElement("p");
-          title.className = "entry-title";
-          title.textContent = snap.id;
-          const meta = document.createElement("p");
-          meta.className = "entry-meta";
-          meta.textContent = `${Math.round(snap.bytes / 1024)} kb`;
-          copy.append(title, meta);
-          const acts = document.createElement("div");
-          acts.className = "acts";
-          const merge = document.createElement("button");
-          merge.type = "button";
-          merge.className = "ghost";
-          merge.textContent = "Merge";
-          merge.addEventListener("click", () => {
-            merge.disabled = true;
-            merge.textContent = "Merging";
-            void restoreSnapshot(snap.id)
-              .then(async (result) => {
-                merge.textContent = `+${result.added}`;
-                await refreshDen();
-              })
-              .catch(() => {
-                merge.textContent = "Failed";
-                merge.disabled = false;
-              });
-          });
-          acts.append(merge);
-          li.append(copy, acts);
-          snapList.append(li);
-        }
-      }
-    } catch {
-      storeStatus.textContent = "Storage is unreachable.";
     }
   }
 
@@ -198,31 +123,8 @@ export async function startApp(root: HTMLElement) {
       await createNote({ title, body, kind: "note" });
       (shell.den.querySelector("#noteTitle") as HTMLInputElement).value = "";
       (shell.den.querySelector("#noteBody") as HTMLTextAreaElement).value = "";
-      say(shell.den, "Note inscribed.", "good");
+      say(shell.den, "Note saved.", "good");
       await refreshDen();
-    });
-  });
-
-  shell.den.querySelector("#snapBtn")?.addEventListener("click", () => {
-    if (!unlocked) return;
-    void guard(shell.den, async () => {
-      await takeSnapshot("manual-ui");
-      say(shell.den, "Snapshot sealed.", "good");
-      await refreshDen();
-    });
-  });
-
-  shell.den.querySelector("#exportBtn")?.addEventListener("click", () => {
-    if (!unlocked) return;
-    void guard(shell.den, async () => {
-      const data = await exportVault();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `ragi-vault-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
     });
   });
 
@@ -241,7 +143,7 @@ export async function startApp(root: HTMLElement) {
       (shell.den.querySelector("#pwCurrent") as HTMLInputElement).value = "";
       (shell.den.querySelector("#pwNew") as HTMLInputElement).value = "";
       (shell.den.querySelector("#pwNew2") as HTMLInputElement).value = "";
-      say(shell.den, "Password updated and sealed.", "good");
+      say(shell.den, "Password updated.", "good");
     });
   });
 
