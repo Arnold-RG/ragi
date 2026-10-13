@@ -6,9 +6,9 @@
     <title>RAGI — Private Secretary</title>
     <meta
       name="description"
-      content="RAGI is an owner-sealed private secretary — cinematic vault for work, money, time, and notes."
+      content="RAGI is an owner-sealed private secretary — cinematic 3D vault for work, money, time, and notes."
     />
-    <meta name="theme-color" content="#05070b" />
+    <meta name="theme-color" content="#03050a" />
     <meta name="color-scheme" content="dark" />
     <link rel="canonical" href="https://arnold-rg.github.io/ragi/" />
     <link rel="icon" href="%BASE_URL%favicon.svg" type="image/svg+xml" />
@@ -27,19 +27,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body>
+  <body class="is-gate">
     <noscript>
-      <p style="font-family: system-ui; padding: 2rem; color: #e8f1f8; background: #05070b">
+      <p style="font-family: system-ui; padding: 2rem; color: #e8f1f8; background: #03050a">
         RAGI needs JavaScript to open the vault.
       </p>
     </noscript>
     <div id="scene-host" class="scene-host" aria-hidden="true"></div>
     <div class="atmosphere" aria-hidden="true"></div>
-    <div id="app" class="shell"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <div id="app" class="shell is-gate"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -9,7 +9,7 @@ import {
   takeSnapshot,
 } from "./api/storage";
 import { isUnlocked, clearSession } from "./state/session";
-import { goRoom, lockNav, renderShell, setApiPill, unlockNav, type Room } from "./ui/shell";
+import { goRoom, lockNav, renderShell, setApiPill, setGateMode, unlockNav, type Room } from "./ui/shell";
 import { renderUnlock } from "./ui/unlock";
 import { renderChamber } from "./ui/chamber";
 import { renderClock, renderForge, renderGold, renderHome, renderHub, renderMap } from "./ui/rooms";
@@ -276,6 +276,7 @@ export async function startApp(root: HTMLElement) {
   }
 
   function bootVault() {
+    setGateMode(shell, true);
     renderUnlock(shell.vault, () => {
       void enterHall();
     });

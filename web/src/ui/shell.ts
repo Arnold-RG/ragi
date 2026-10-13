@@ -39,11 +39,14 @@ function roomButton(room: Room, code: string, name: string, opts?: { here?: bool
 }
 
 export function renderShell(root: HTMLElement) {
+  document.body.classList.add("is-gate");
+  root.classList.add("is-gate");
+
   root.innerHTML = `
     <a class="skip" href="#chamber">Skip to the room</a>
     <header class="mast">
       <div class="brand">
-        <p class="eyebrow">Sealed vault · live hologram</p>
+        <p class="eyebrow">Arnova · sealed vault</p>
         <h1>RAGI</h1>
       </div>
       <div class="mast-meta">
@@ -51,7 +54,7 @@ export function renderShell(root: HTMLElement) {
         <p class="api-pill" id="apiPill" role="status">
           <span class="api-dot" aria-hidden="true"></span>
           <span class="api-copy">
-            <span class="api-state">Checking the vault link</span>
+            <span class="api-state">Checking link</span>
             <span class="api-origin"></span>
           </span>
         </p>
@@ -61,9 +64,9 @@ export function renderShell(root: HTMLElement) {
     </header>
 
     <div class="workspace">
-      <nav class="rooms" aria-label="Rooms">
-        ${roomButton("vault", "N-14", "Vault", { here: true, open: true })}
-        ${roomButton("hall", "W-02", "Hall")}
+      <nav class="rooms" aria-label="Rooms" hidden>
+        ${roomButton("vault", "N-14", "Vault", { open: true })}
+        ${roomButton("hall", "W-02", "Hall", { here: true })}
         ${roomButton("home", "H-01", "Home")}
         ${roomButton("forge", "F-33", "Forge")}
         ${roomButton("gold", "G-55", "Gold")}
@@ -88,7 +91,7 @@ export function renderShell(root: HTMLElement) {
             <p class="room-index">E-77</p>
             <h2 class="prompt" tabindex="-1">Den</h2>
           </header>
-          <p class="lore">Notes live with your vault. A snapshot is an append-only copy of your account only. Restoring one merges it back. It does not wipe your seals, and it cannot see anyone else's book.</p>
+          <p class="lore">Notes live with your vault. A snapshot is an append-only copy of your account only. Restoring one merges it back.</p>
           <p class="msg" data-room-msg role="status"></p>
           <div class="dash-grid">
             <section class="stat-box">
@@ -127,7 +130,7 @@ export function renderShell(root: HTMLElement) {
     </div>
     <footer class="colophon">
       <p>Arnova Group · Arnold-RG</p>
-      <p>3D vault UI · encrypted session · your account alone</p>
+      <p>3D vault · encrypted session · your account alone</p>
     </footer>
   `;
 
@@ -149,18 +152,28 @@ export function renderShell(root: HTMLElement) {
     voidBack: root.querySelector("#voidBack") as HTMLButtonElement,
     nav: root.querySelector(".rooms") as HTMLElement,
     navButtons: [...root.querySelectorAll<HTMLButtonElement>(".rooms button")],
+    root,
   };
 }
 
 export type ShellParts = ReturnType<typeof renderShell>;
+
+export function setGateMode(parts: ShellParts, gate: boolean) {
+  document.body.classList.toggle("is-gate", gate);
+  parts.root.classList.toggle("is-gate", gate);
+  parts.nav.hidden = gate;
+  if (gate) {
+    parts.signOut.hidden = true;
+  }
+}
 
 export function setApiPill(el: HTMLElement, ok: boolean) {
   const state = el.querySelector(".api-state");
   const origin = el.querySelector(".api-origin");
   const reachable = pageCanReachApi();
   if (!reachable) {
-    if (state) state.textContent = "Account server not connected";
-    if (origin) origin.textContent = "Sign-up here starts once VITE_API_ORIGIN is set.";
+    if (state) state.textContent = "API offline";
+    if (origin) origin.textContent = "Set VITE_API_ORIGIN to connect accounts.";
     el.classList.remove("ok");
     el.classList.add("bad");
     el.title = "This deploy has no API origin yet.";
@@ -219,6 +232,7 @@ export function goRoom(room: Room, parts: ShellParts, unlocked: boolean, opts?: 
 }
 
 export function unlockNav(parts: ShellParts) {
+  setGateMode(parts, false);
   parts.nav.classList.add("is-open");
   parts.signOut.hidden = false;
   parts.navButtons.forEach((button) => {
@@ -228,6 +242,7 @@ export function unlockNav(parts: ShellParts) {
 }
 
 export function lockNav(parts: ShellParts) {
+  setGateMode(parts, true);
   parts.nav.classList.remove("is-open");
   parts.signOut.hidden = true;
   parts.navButtons.forEach((button) => {
