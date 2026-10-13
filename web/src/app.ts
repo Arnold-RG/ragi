@@ -6,9 +6,11 @@ import { goRoom, lockNav, renderShell, setApiPill, setGateMode, unlockNav, type 
 import { renderUnlock } from "./ui/unlock";
 import { renderChamber } from "./ui/chamber";
 import { renderClock, renderForge, renderGold, renderHome, renderHub, renderMap } from "./ui/rooms";
+import { renderPulse } from "./ui/pulse";
 import { deleteNote, patchNote } from "./api/life";
 import { ApiError } from "./api/client";
 import { guard, openRowEditor, say } from "./ui/dom";
+import { animateAppChrome, animateRoom, animateVault, type MotionHandle } from "./motion/ragiMotion";
 
 type NoteRow = { id: string; title: string; body: string };
 
@@ -16,7 +18,20 @@ export async function startApp(root: HTMLElement) {
   const shell = renderShell(root);
   let unlocked = isUnlocked();
   let disposeChamber: (() => void) | null = null;
+  let disposePulse: (() => void) | null = null;
+  let roomMotion: MotionHandle | null = null;
+  let vaultMotion: MotionHandle | null = null;
   let notesById = new Map<string, NoteRow>();
+
+  function playRoomMotion(target: HTMLElement) {
+    roomMotion?.dispose();
+    roomMotion = animateRoom(target);
+  }
+
+  window.addEventListener("ragi:motion", ((event: CustomEvent<{ root?: HTMLElement }>) => {
+    const el = event.detail?.root;
+    if (el) playRoomMotion(el);
+  }) as EventListener);
 
   const healthy = await pingHealth();
   setApiPill(shell.apiPill, healthy);
@@ -148,13 +163,43 @@ export async function startApp(root: HTMLElement) {
 
   async function paintRoom(room: Room) {
     if (!unlocked) return;
-    if (room === "home") await renderHome(shell.home);
-    if (room === "forge") await renderForge(shell.forge);
-    if (room === "gold") await renderGold(shell.gold);
-    if (room === "clock") await renderClock(shell.clock);
-    if (room === "hub") await renderHub(shell.hub);
-    if (room === "map") await renderMap(shell.map);
-    if (room === "den") await refreshDen();
+    disposePulse?.();
+    disposePulse = null;
+    let stage: HTMLElement | null = null;
+    if (room === "home") {
+      await renderHome(shell.home);
+      stage = shell.home;
+    }
+    if (room === "forge") {
+      await renderForge(shell.forge);
+      stage = shell.forge;
+    }
+    if (room === "gold") {
+      await renderGold(shell.gold);
+      stage = shell.gold;
+    }
+    if (room === "clock") {
+      await renderClock(shell.clock);
+      stage = shell.clock;
+    }
+    if (room === "pulse") {
+      disposePulse = await renderPulse(shell.pulse);
+      /* motion triggered from pulse paint via ragi:motion */
+    }
+    if (room === "hub") {
+      await renderHub(shell.hub);
+      stage = shell.hub;
+    }
+    if (room === "map") {
+      await renderMap(shell.map);
+      stage = shell.map;
+    }
+    if (room === "den") {
+      await refreshDen();
+      stage = shell.den;
+    }
+    if (room === "hall") stage = shell.hall;
+    if (stage) playRoomMotion(stage);
   }
 
   async function leave() {
@@ -176,6 +221,9 @@ export async function startApp(root: HTMLElement) {
   async function enterApp() {
     unlocked = true;
     unlockNav(shell);
+    vaultMotion?.dispose();
+    vaultMotion = null;
+    animateAppChrome(shell.root);
     goRoom("home", shell, unlocked);
     disposeChamber?.();
     disposeChamber = await renderChamber(shell.hall, () => {
@@ -202,6 +250,8 @@ export async function startApp(root: HTMLElement) {
     renderUnlock(shell.vault, () => {
       void enterApp();
     });
+    vaultMotion?.dispose();
+    vaultMotion = animateVault(shell.vault);
   }
 
   bootVault();
@@ -237,6 +287,13 @@ export async function startApp(root: HTMLElement) {
       void paintRoom(room);
     });
   });
+
+  window.addEventListener("ragi:goto", ((event: CustomEvent<{ room?: Room }>) => {
+    const room = event.detail?.room;
+    if (!room || !unlocked) return;
+    goRoom(room, shell, unlocked, { focus: true });
+    void paintRoom(room);
+  }) as EventListener);
 
   window.setInterval(() => {
     if (document.hidden) return;
