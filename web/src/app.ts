@@ -272,10 +272,10 @@ export async function startApp(root: HTMLElement) {
     goRoom("vault", shell, false);
   }
 
-  async function enterHall() {
+  async function enterApp() {
     unlocked = true;
     unlockNav(shell);
-    goRoom("hall", shell, unlocked);
+    goRoom("home", shell, unlocked);
     disposeChamber?.();
     disposeChamber = await renderChamber(shell.hall, () => {
       unlocked = false;
@@ -285,24 +285,23 @@ export async function startApp(root: HTMLElement) {
       bootVault();
       goRoom("vault", shell, false);
     });
+    await paintRoom("home");
     if (!isLocalToken(getToken())) {
       await refreshDen();
     }
     try {
       const profile = await me();
-      const mode = profile.mode === "personal" ? "personal" : "work";
-      const seal = isLocalToken(getToken()) ? "device vault" : mode;
-      shell.hpLine.textContent = `${profile.handle} · ${seal}`;
+      shell.hpLine.textContent = profile.handle;
     } catch {
       const meta = getSessionMeta();
-      shell.hpLine.textContent = meta?.handle ? `${meta.handle} · sealed` : "Session weak";
+      shell.hpLine.textContent = meta?.handle ?? "Signed in";
     }
   }
 
   function bootVault() {
     setGateMode(shell, true);
     renderUnlock(shell.vault, () => {
-      void enterHall();
+      void enterApp();
     });
   }
 
@@ -311,7 +310,7 @@ export async function startApp(root: HTMLElement) {
   if (unlocked) {
     try {
       await me();
-      await enterHall();
+      await enterApp();
     } catch {
       clearSession();
       unlocked = false;
@@ -323,15 +322,15 @@ export async function startApp(root: HTMLElement) {
     void leave();
   });
 
-  shell.voidBack.addEventListener("click", () => {
-    goRoom("vault", shell, unlocked, { focus: true });
+  shell.voidBack?.addEventListener("click", () => {
+    goRoom("home", shell, unlocked, { focus: true });
   });
 
   shell.navButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const room = btn.dataset.room as Room;
-      if (room !== "vault" && room !== "void" && !unlocked) {
-        say(shell.vault, "That room opens after you sign in.", "bad");
+      if (!unlocked) {
+        say(shell.vault, "Sign in first.", "bad");
         goRoom("vault", shell, unlocked);
         return;
       }

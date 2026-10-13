@@ -155,7 +155,7 @@ body.is-gate {
   backdrop-filter: blur(12px);
 }
 
-.shell.is-gate .workspace {
+.shell.is-gate .app-layout {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -163,7 +163,7 @@ body.is-gate {
   min-height: 0;
 }
 
-.shell.is-gate .frame {
+.shell.is-gate .app-main {
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -173,9 +173,250 @@ body.is-gate {
   animation: none;
 }
 
-.shell.is-gate .frame::before { display: none; }
+.shell.is-gate .app-nav,
+.shell.is-gate .app-top,
+.shell.is-gate .app-foot {
+  display: none !important;
+}
 
-.shell.is-gate .rooms { display: none !important; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* —— Friendly app shell (after login) —— */
+.shell.is-app {
+  width: min(1120px, calc(100% - clamp(1rem, 4vw, 2.5rem)));
+}
+
+.app-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(12, 18, 28, 0.45);
+  backdrop-filter: blur(18px);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-logo {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 0 12px rgba(79, 208, 255, 0.35));
+}
+
+.app-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.app-brand h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.app-top-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem 0.75rem;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.app-nav {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 16, 24, 0.5);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0.75rem;
+}
+
+.app-nav-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  border-radius: 12px;
+  padding: 0.7rem 0.75rem;
+  cursor: pointer;
+  font-family: inherit;
+  display: grid;
+  gap: 0.1rem;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.app-nav-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.app-nav-btn.is-here {
+  color: var(--text);
+  border-color: rgba(79, 208, 255, 0.35);
+  background: linear-gradient(135deg, rgba(79, 208, 255, 0.16), rgba(12, 18, 28, 0.55));
+}
+
+.app-nav-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.app-nav-hint {
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+
+.app-nav-more {
+  margin-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 12px 12px;
+  padding-top: 0.85rem;
+}
+
+.app-main {
+  min-height: 560px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background: rgba(10, 16, 24, 0.55);
+  backdrop-filter: blur(20px);
+  padding: clamp(1.1rem, 2.5vw, 1.6rem);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.page-head {
+  margin-bottom: 1rem;
+}
+
+.page-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  outline: none;
+}
+
+.page-sub {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  max-width: 40rem;
+  font-size: 0.98rem;
+}
+
+.ask-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.ask-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ask-modes {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  width: fit-content;
+}
+
+.ask-modes button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.5rem 0.95rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ask-modes button[aria-pressed="true"] {
+  background: linear-gradient(135deg, rgba(79, 208, 255, 0.35), rgba(232, 184, 106, 0.22));
+  color: #fff;
+}
+
+.ask-brief {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.ask-log {
+  min-height: 220px;
+  max-height: 360px;
+}
+
+.ask-cmd {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.45rem;
+  padding: 0.45rem;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: rgba(4, 8, 14, 0.65);
+}
+
+.ask-cmd input {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  padding: 0.55rem 0.35rem;
+}
+
+.ask-cmd input:focus {
+  outline: none;
+}
+
+.app-foot {
+  opacity: 0.75;
+}
 
 /* —— Glass vault login (centered) —— */
 .vault-stage {
@@ -1187,18 +1428,23 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important
 }
 
 @media (max-width: 960px) {
-  .rooms { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .app-layout { grid-template-columns: 1fr; }
+  .app-nav {
+    position: static;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .app-nav-more { margin-top: 0; border-top: 0; padding-top: 0.7rem; }
   .world, .dash-grid { grid-template-columns: 1fr; }
   .stat-box.wide { grid-column: auto; }
-  .mast { flex-direction: column; }
-  .mast-meta { justify-content: flex-start; text-align: left; }
+  .app-top { flex-direction: column; align-items: flex-start; }
+  .app-top-meta { justify-content: flex-start; }
 }
 
 @media (max-width: 640px) {
-  .rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ask-cmd { grid-template-columns: 1fr; }
   .cmd { grid-template-columns: 1fr; }
   .bar-row { grid-template-columns: 4.5rem 1fr 2.2rem; }
-  .shell.is-gate .mast-meta { gap: 0.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -15,26 +15,33 @@ export type Room =
 const LOCKED: Room[] = ["hall", "home", "forge", "gold", "clock", "hub", "map", "den"];
 
 const TITLES: Record<Room, string> = {
-  vault: "Vault",
-  hall: "Hall",
-  home: "Home",
-  forge: "Forge",
-  gold: "Gold",
-  clock: "Clock",
-  hub: "Hub",
-  map: "Map",
-  den: "Den",
-  void: "Void",
+  vault: "Sign in",
+  hall: "Ask RAGI",
+  home: "Today",
+  forge: "Work",
+  gold: "Money",
+  clock: "Schedule",
+  hub: "GitHub",
+  map: "Progress",
+  den: "Notes",
+  void: "Sign out space",
 };
 
-function roomButton(room: Room, code: string, name: string, opts?: { here?: boolean; open?: boolean }) {
-  const locked = !opts?.open && LOCKED.includes(room);
-  return `<button type="button" data-room="${room}" class="${opts?.here ? "is-here" : ""}"${
+const NAV: Array<{ room: Room; label: string; hint: string }> = [
+  { room: "home", label: "Today", hint: "Overview" },
+  { room: "hall", label: "Ask", hint: "Chat with RAGI" },
+  { room: "forge", label: "Work", hint: "Projects & jobs" },
+  { room: "gold", label: "Money", hint: "Cash & spend" },
+  { room: "clock", label: "Schedule", hint: "Meetings & time" },
+  { room: "den", label: "Notes", hint: "Notes & account" },
+];
+
+function navButton(item: (typeof NAV)[number], opts?: { here?: boolean }) {
+  return `<button type="button" data-room="${item.room}" class="app-nav-btn${opts?.here ? " is-here" : ""}"${
     opts?.here ? ' aria-current="page"' : ""
-  }${locked ? " disabled" : ""}>
-      <span class="room-code">${code}</span>
-      <span class="room-name">${name}</span>
-      ${locked ? '<span class="room-lock">Locked</span>' : ""}
+  } disabled>
+      <span class="app-nav-label">${item.label}</span>
+      <span class="app-nav-hint">${item.hint}</span>
     </button>`;
 }
 
@@ -43,18 +50,22 @@ export function renderShell(root: HTMLElement) {
   root.classList.add("is-gate");
 
   root.innerHTML = `
-    <a class="skip" href="#chamber">Skip to the room</a>
-    <header class="mast">
-      <div class="brand">
-        <p class="eyebrow">Arnova · sealed vault</p>
-        <h1>RAGI</h1>
+    <a class="skip" href="#chamber">Skip to content</a>
+
+    <header class="app-top">
+      <div class="app-brand">
+        <img class="app-logo" src="${import.meta.env.BASE_URL}logo.svg" width="36" height="36" alt="" />
+        <div>
+          <p class="app-kicker">Private secretary</p>
+          <h1>RAGI</h1>
+        </div>
       </div>
-      <div class="mast-meta">
+      <div class="app-top-meta">
         <time id="nowClock" class="now"></time>
         <p class="api-pill" id="apiPill" role="status">
           <span class="api-dot" aria-hidden="true"></span>
           <span class="api-copy">
-            <span class="api-state">Checking link</span>
+            <span class="api-state">Checking</span>
             <span class="api-origin"></span>
           </span>
         </p>
@@ -63,42 +74,45 @@ export function renderShell(root: HTMLElement) {
       </div>
     </header>
 
-    <div class="workspace">
-      <nav class="rooms" aria-label="Rooms" hidden>
-        ${roomButton("vault", "N-14", "Vault", { open: true })}
-        ${roomButton("hall", "W-02", "Hall", { here: true })}
-        ${roomButton("home", "H-01", "Home")}
-        ${roomButton("forge", "F-33", "Forge")}
-        ${roomButton("gold", "G-55", "Gold")}
-        ${roomButton("clock", "C-88", "Clock")}
-        ${roomButton("hub", "G-77", "Hub")}
-        ${roomButton("map", "M-99", "Map")}
-        ${roomButton("den", "E-77", "Den")}
-        ${roomButton("void", "S-00", "Void", { open: true })}
+    <div class="app-layout">
+      <nav class="app-nav" aria-label="Main" hidden>
+        ${NAV.map((item, i) => navButton(item, { here: i === 0 })).join("")}
+        <button type="button" data-room="hub" class="app-nav-btn app-nav-more" disabled>
+          <span class="app-nav-label">GitHub</span>
+          <span class="app-nav-hint">Repos</span>
+        </button>
       </nav>
 
-      <main class="frame" id="chamber" tabindex="-1">
+      <main class="app-main" id="chamber" tabindex="-1">
         <section id="roomVault" class="view is-on"></section>
-        <section id="roomHall" class="view" aria-label="Hall"></section>
-        <section id="roomHome" class="view" aria-label="Home"></section>
-        <section id="roomForge" class="view" aria-label="Forge"></section>
-        <section id="roomGold" class="view" aria-label="Gold"></section>
-        <section id="roomClock" class="view" aria-label="Clock"></section>
-        <section id="roomHub" class="view" aria-label="Hub"></section>
-        <section id="roomMap" class="view" aria-label="Map"></section>
-        <section id="roomDen" class="view" aria-label="Den">
-          <header class="room-head">
-            <p class="room-index">E-77</p>
-            <h2 class="prompt" tabindex="-1">Den</h2>
+        <section id="roomHall" class="view" aria-label="Ask RAGI"></section>
+        <section id="roomHome" class="view" aria-label="Today"></section>
+        <section id="roomForge" class="view" aria-label="Work"></section>
+        <section id="roomGold" class="view" aria-label="Money"></section>
+        <section id="roomClock" class="view" aria-label="Schedule"></section>
+        <section id="roomHub" class="view" aria-label="GitHub"></section>
+        <section id="roomMap" class="view" aria-label="Progress" hidden></section>
+        <section id="roomDen" class="view" aria-label="Notes">
+          <header class="page-head">
+            <h2 class="page-title" tabindex="-1">Notes & account</h2>
+            <p class="page-sub">Save notes, back up your vault, or change your password.</p>
           </header>
-          <p class="lore">Notes live with your vault. A snapshot is an append-only copy of your account only. Restoring one merges it back.</p>
           <p class="msg" data-room-msg role="status"></p>
           <div class="dash-grid">
+            <section class="stat-box wide">
+              <h3>Notes</h3>
+              <ul class="jobs" id="noteList"><li class="entry is-empty"><p class="entry-title">Sign in to read your notes.</p></li></ul>
+              <form class="stack" id="noteForm">
+                <label class="field"><span>Title</span><input id="noteTitle" name="title" autocomplete="off" maxlength="160" /></label>
+                <label class="field"><span>Note</span><textarea id="noteBody" name="body" maxlength="8000"></textarea></label>
+                <button type="submit" id="noteAdd" class="primary">Save note</button>
+              </form>
+            </section>
             <section class="stat-box">
-              <h3>Storage</h3>
-              <div id="storeStatus" class="quiet">Loading the ledger…</div>
+              <h3>Backup</h3>
+              <div id="storeStatus" class="quiet">Loading…</div>
               <div class="form-actions">
-                <button type="button" id="snapBtn" class="primary">Seal a snapshot</button>
+                <button type="button" id="snapBtn" class="primary">Save snapshot</button>
                 <button type="button" id="exportBtn" class="ghost">Export JSON</button>
               </div>
             </section>
@@ -107,17 +121,8 @@ export function renderShell(root: HTMLElement) {
               <ul class="jobs" id="snapList"><li class="entry is-empty"><p class="entry-title">None yet.</p></li></ul>
             </section>
             <section class="stat-box wide">
-              <h3>Notes</h3>
-              <ul class="jobs" id="noteList"><li class="entry is-empty"><p class="entry-title">Sign in to read your notes.</p></li></ul>
-              <form class="stack" id="noteForm">
-                <label class="field"><span>Title</span><input id="noteTitle" name="title" autocomplete="off" maxlength="160" /></label>
-                <label class="field"><span>Note</span><textarea id="noteBody" name="body" maxlength="8000"></textarea></label>
-                <button type="submit" id="noteAdd" class="primary">Inscribe</button>
-              </form>
-            </section>
-            <section class="stat-box wide">
               <h3>Change password</h3>
-              <p class="hint">Use this when you still know the current password. Forgot? Use the vault Forgot tab with your recovery key.</p>
+              <p class="hint">If you forgot it, use Forgot password on the sign-in screen with your recovery key.</p>
               <form class="stack" id="passwordForm">
                 <label class="field"><span>Current password</span><input id="pwCurrent" type="password" autocomplete="current-password" required minlength="1" maxlength="128" /></label>
                 <label class="field"><span>New password</span><input id="pwNew" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
@@ -126,21 +131,14 @@ export function renderShell(root: HTMLElement) {
               </form>
             </section>
           </div>
-          <p class="hint">A restore merges into this account only.</p>
         </section>
-        <section class="dead-end" id="voidMsg">
-          <header class="room-head">
-            <p class="room-index">S-00</p>
-            <h2 class="prompt" tabindex="-1">Void</h2>
-          </header>
-          <p class="lore">Nothing is stored in this room. When you want the door again, return to the vault.</p>
-          <button type="button" id="voidBack" class="primary">Back to the vault</button>
-        </section>
+        <section class="dead-end" id="voidMsg" hidden></section>
       </main>
     </div>
-    <footer class="colophon">
-      <p>Arnova Group · Arnold-RG</p>
-      <p>3D vault · encrypted session · your account alone</p>
+
+    <footer class="colophon app-foot">
+      <p>Arnova Group</p>
+      <p>Your private secretary</p>
     </footer>
   `;
 
@@ -159,9 +157,9 @@ export function renderShell(root: HTMLElement) {
     hpLine: root.querySelector("#hpLine") as HTMLElement,
     now: root.querySelector("#nowClock") as HTMLTimeElement,
     signOut: root.querySelector("#signOutBtn") as HTMLButtonElement,
-    voidBack: root.querySelector("#voidBack") as HTMLButtonElement,
-    nav: root.querySelector(".rooms") as HTMLElement,
-    navButtons: [...root.querySelectorAll<HTMLButtonElement>(".rooms button")],
+    voidBack: root.querySelector("#voidBack") as HTMLButtonElement | null,
+    nav: root.querySelector(".app-nav") as HTMLElement,
+    navButtons: [...root.querySelectorAll<HTMLButtonElement>(".app-nav button")],
     root,
   };
 }
@@ -171,10 +169,13 @@ export type ShellParts = ReturnType<typeof renderShell>;
 export function setGateMode(parts: ShellParts, gate: boolean) {
   document.body.classList.toggle("is-gate", gate);
   parts.root.classList.toggle("is-gate", gate);
+  parts.root.classList.toggle("is-app", !gate);
   parts.nav.hidden = gate;
-  if (gate) {
-    parts.signOut.hidden = true;
-  }
+  const top = parts.root.querySelector(".app-top") as HTMLElement | null;
+  if (top) top.hidden = gate;
+  const foot = parts.root.querySelector(".app-foot") as HTMLElement | null;
+  if (foot) foot.hidden = gate;
+  if (gate) parts.signOut.hidden = true;
 }
 
 export function setApiPill(el: HTMLElement, ok: boolean) {
@@ -182,18 +183,16 @@ export function setApiPill(el: HTMLElement, ok: boolean) {
   const origin = el.querySelector(".api-origin");
   const reachable = pageCanReachApi();
   if (!reachable) {
-    if (state) state.textContent = "Device vault";
-    if (origin) origin.textContent = "Accounts seal on this browser. API optional.";
+    if (state) state.textContent = "On this device";
+    if (origin) origin.textContent = "Local vault active";
     el.classList.remove("bad");
     el.classList.add("ok");
-    el.title = "Encrypted local accounts are active. Connect VITE_API_ORIGIN for the full server vault.";
     return;
   }
-  if (state) state.textContent = ok ? "Vault link up" : "Vault link down";
-  if (origin) origin.textContent = API_ORIGIN;
+  if (state) state.textContent = ok ? "Connected" : "Offline";
+  if (origin) origin.textContent = ok ? "Account server ready" : API_ORIGIN;
   el.classList.toggle("ok", ok);
   el.classList.toggle("bad", !ok);
-  el.title = ok ? `Answering at ${API_ORIGIN}` : `No answer from ${API_ORIGIN}`;
 }
 
 export function goRoom(room: Room, parts: ShellParts, unlocked: boolean, opts?: { focus?: boolean }) {
@@ -216,20 +215,18 @@ export function goRoom(room: Room, parts: ShellParts, unlocked: boolean, opts?: 
   });
 
   const show = (name: Room, el: HTMLElement) => {
-    if (name !== "void") el.classList.add("is-on");
+    el.classList.add("is-on");
     const button = parts.navButtons.find((item) => item.dataset.room === name);
     button?.classList.add("is-here");
     button?.setAttribute("aria-current", "page");
     document.title = `${TITLES[name]} — RAGI`;
     if (opts?.focus) {
-      const heading = (name === "void" ? parts.voidMsg : el).querySelector<HTMLElement>("h2");
-      heading?.focus();
+      el.querySelector<HTMLElement>("h2")?.focus();
     }
   };
 
   if (room === "void") {
-    parts.voidMsg.classList.add("is-on");
-    show("void", parts.voidMsg);
+    show("home", parts.home);
     return;
   }
 
@@ -246,8 +243,7 @@ export function unlockNav(parts: ShellParts) {
   parts.nav.classList.add("is-open");
   parts.signOut.hidden = false;
   parts.navButtons.forEach((button) => {
-    const room = button.dataset.room as Room;
-    if (LOCKED.includes(room)) button.disabled = false;
+    button.disabled = false;
   });
 }
 

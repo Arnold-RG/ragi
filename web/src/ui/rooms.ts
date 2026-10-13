@@ -28,13 +28,12 @@ import { listGithubRepos, setGithubLogin, setGithubProgress } from "../api/githu
 import { ApiError } from "../api/client";
 import { esc, guard, meter, openRowEditor, say } from "./dom";
 
-function roomHead(code: string, title: string, lore: string) {
-  return `<header class="room-head">
-      <p class="room-index">${esc(code)}</p>
-      <h2 class="prompt" tabindex="-1">${esc(title)}</h2>
-    </header>
-    <p class="lore">${lore}</p>
-    <p class="msg" data-room-msg role="status"></p>`;
+function roomHead(_code: string, title: string, lore: string) {
+  return `<header class="page-head">
+      <h2 class="page-title" tabindex="-1">${esc(title)}</h2>
+      <p class="page-sub">${lore}</p>
+      <p class="msg" data-room-msg role="status"></p>
+    </header>`;
 }
 
 function cashChart(series: Dashboard["charts"]["cashSeries"]) {
@@ -80,18 +79,20 @@ async function loadDash(root: HTMLElement): Promise<Dashboard | null> {
 }
 
 export async function renderHome(root: HTMLElement) {
-  root.innerHTML = `${roomHead("H-01", "Home", "Opening the board…")}`;
+  root.innerHTML = `${roomHead("", "Today", "Loading your day…")}`;
   const dash = await loadDash(root);
   if (!dash) return;
   const focus = dash.focusActive
     ? `${esc(dash.focusActive.label)} until ${esc(new Date(dash.focusActive.endsAt).toLocaleTimeString())}`
     : "None";
+  const hour = new Date().getHours();
+  const hello = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   root.innerHTML = `
-    ${roomHead("H-01", "Home", `The board for today. Work and personal share one vault. The hall is set to <strong>${esc(dash.mode)}</strong>.`)}
+    ${roomHead("", "Today", `${hello}. Here’s a clear view of your day · mode: <strong>${esc(dash.mode)}</strong>`)}
     <div class="dash-grid">
       <section class="stat-box">
-        <h3>Board</h3>
+        <h3>At a glance</h3>
         <ul class="kpi">
           <li><span>Projects</span><b>${dash.projects.length}</b></li>
           <li><span>Goals</span><b>${dash.goals.length}</b></li>
@@ -163,12 +164,12 @@ export async function renderHome(root: HTMLElement) {
 }
 
 export async function renderForge(root: HTMLElement) {
-  root.innerHTML = `${roomHead("F-33", "Forge", "Opening the forge…")}`;
+  root.innerHTML = `${roomHead("", "Work", "Loading projects…")}`;
   const dash = await loadDash(root);
   if (!dash) return;
 
   root.innerHTML = `
-    ${roomHead("F-33", "Forge", "Projects, goals, and the shape of the day. Progress here is what the Map draws.")}
+    ${roomHead("", "Work", "Projects, goals, and your day tasks.")}
     <div class="dash-grid">
       <section class="stat-box">
         <h3>Projects</h3>
@@ -391,13 +392,13 @@ export async function renderForge(root: HTMLElement) {
 }
 
 export async function renderGold(root: HTMLElement) {
-  root.innerHTML = `${roomHead("G-55", "Gold", "Opening the ledger…")}`;
+  root.innerHTML = `${roomHead("", "Money", "Loading money…")}`;
   const dash = await loadDash(root);
   if (!dash) return;
   const f = dash.finance;
 
   root.innerHTML = `
-    ${roomHead("G-55", "Gold", "Income, expense, and what is left. The Map reads the same figures.")}
+    ${roomHead("", "Money", "Income, spending, and what is left.")}
     <div class="dash-grid">
       <section class="stat-box">
         <h3>Balance</h3>
@@ -492,12 +493,12 @@ export async function renderGold(root: HTMLElement) {
 }
 
 export async function renderClock(root: HTMLElement) {
-  root.innerHTML = `${roomHead("C-88", "Clock", "Opening the clock…")}`;
+  root.innerHTML = `${roomHead("", "Schedule", "Loading schedule…")}`;
   const dash = await loadDash(root);
   if (!dash) return;
 
   root.innerHTML = `
-    ${roomHead("C-88", "Clock", "Meetings, reminders, and the plans you hope not to need.")}
+    ${roomHead("", "Schedule", "Meetings, reminders, and plans.")}
     <div class="dash-grid">
       <section class="stat-box">
         <h3>Meetings</h3>
@@ -661,12 +662,12 @@ export async function renderClock(root: HTMLElement) {
 }
 
 export async function renderHub(root: HTMLElement) {
-  root.innerHTML = `${roomHead("G-77", "Hub", "Asking GitHub…")}`;
+  root.innerHTML = `${roomHead("", "GitHub", "Loading repositories…")}`;
   try {
     const data = await listGithubRepos();
     if (data.needsLogin || !data.login) {
       root.innerHTML = `
-        ${roomHead("G-77", "Hub", "Public repositories only. RAGI does not use a shared token, so one member's private code never appears in another's house.")}
+        ${roomHead("", "GitHub", "Track public repo progress for your account only.")}
         <form class="stack narrow" id="ghLoginForm">
           <label class="field"><span>GitHub username</span><input id="ghLogin" maxlength="39" autocomplete="off" spellcheck="false" /></label>
           <button type="submit" class="primary">Save</button>
@@ -686,9 +687,9 @@ export async function renderHub(root: HTMLElement) {
 
     root.innerHTML = `
       ${roomHead(
-        "G-77",
-        "Hub",
-        `${data.count} public repositories for ${esc(data.login)}. Average done ${data.avgProgress}%, remaining ${data.avgRemaining}%.`,
+        "",
+        "GitHub",
+        `${data.count} public repos for ${esc(data.login)}. Average done ${data.avgProgress}%, remaining ${data.avgRemaining}%.`,
       )}
       <form class="inline-form" id="ghLoginForm">
         <label class="field"><span>GitHub username</span><input id="ghLogin" value="${esc(data.login)}" maxlength="39" autocomplete="off" spellcheck="false" /></label>
@@ -756,18 +757,18 @@ export async function renderHub(root: HTMLElement) {
     });
   } catch (err) {
     const msg = err instanceof ApiError ? err.message : "GitHub did not answer.";
-    root.innerHTML = `${roomHead("G-77", "Hub", "")}<p class="msg bad" role="alert">${esc(msg)}</p>
-      <p class="hint">The hub reads public repositories for the username on your account.</p>`;
+    root.innerHTML = `${roomHead("", "GitHub", "")}<p class="msg bad" role="alert">${esc(msg)}</p>
+      <p class="hint">Connect a GitHub username to list public repositories.</p>`;
   }
 }
 
 export async function renderMap(root: HTMLElement) {
-  root.innerHTML = `${roomHead("M-99", "Map", "Drawing the map…")}`;
+  root.innerHTML = `${roomHead("", "Progress", "Loading progress…")}`;
   const dash = await loadDash(root);
   if (!dash) return;
 
   root.innerHTML = `
-    ${roomHead("M-99", "Map", "Progress, direction, and cash, drawn from your vault.")}
+    ${roomHead("", "Progress", "Progress, direction, and cash from your vault.")}
     <div class="dash-grid">
       <section class="stat-box wide">
         <h3>Direction</h3>
