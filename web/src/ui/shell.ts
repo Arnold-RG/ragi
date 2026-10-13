@@ -8,12 +8,13 @@ export type Room =
   | "gold"
   | "clock"
   | "pulse"
+  | "stage"
   | "hub"
   | "map"
   | "den"
   | "void";
 
-const LOCKED: Room[] = ["hall", "home", "forge", "gold", "clock", "pulse", "hub", "map", "den"];
+const LOCKED: Room[] = ["hall", "home", "forge", "gold", "clock", "pulse", "stage", "hub", "map", "den"];
 
 const TITLES: Record<Room, string> = {
   vault: "Sign in",
@@ -23,6 +24,7 @@ const TITLES: Record<Room, string> = {
   gold: "Money",
   clock: "Schedule",
   pulse: "Pulse",
+  stage: "Motion",
   hub: "GitHub",
   map: "Progress",
   den: "Notes",
@@ -33,6 +35,7 @@ const NAV: Array<{ room: Room; label: string; hint: string }> = [
   { room: "home", label: "Today", hint: "Day board" },
   { room: "hall", label: "Ask", hint: "Talk to RAGI" },
   { room: "forge", label: "Work", hint: "Projects & GitHub" },
+  { room: "stage", label: "Motion", hint: "Scroll theater" },
   { room: "pulse", label: "Pulse", hint: "Focus studio" },
   { room: "gold", label: "Money", hint: "Cash flow" },
   { room: "clock", label: "Schedule", hint: "Calls & meetings" },
@@ -90,6 +93,7 @@ export function renderShell(root: HTMLElement) {
         <section id="roomGold" class="view" aria-label="Money"></section>
         <section id="roomClock" class="view" aria-label="Schedule"></section>
         <section id="roomPulse" class="view" aria-label="Pulse"></section>
+        <section id="roomStage" class="view" aria-label="Motion"></section>
         <section id="roomHub" class="view" aria-label="GitHub"></section>
         <section id="roomMap" class="view" aria-label="Progress" hidden></section>
         <section id="roomDen" class="view" aria-label="Notes">
@@ -145,6 +149,7 @@ export function renderShell(root: HTMLElement) {
     gold: root.querySelector("#roomGold") as HTMLElement,
     clock: root.querySelector("#roomClock") as HTMLElement,
     pulse: root.querySelector("#roomPulse") as HTMLElement,
+    stage: root.querySelector("#roomStage") as HTMLElement,
     hub: root.querySelector("#roomHub") as HTMLElement,
     map: root.querySelector("#roomMap") as HTMLElement,
     den: root.querySelector("#roomDen") as HTMLElement,
@@ -202,6 +207,7 @@ export function goRoom(room: Room, parts: ShellParts, unlocked: boolean, opts?: 
     "gold",
     "clock",
     "pulse",
+    "stage",
     "hub",
     "map",
     "den",

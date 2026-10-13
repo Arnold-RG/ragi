@@ -3,14 +3,15 @@ import { changePassword, logout, me } from "./api/auth";
 import { createNote, listNotes } from "./api/secretary";
 import { isUnlocked, clearSession, getSessionMeta } from "./state/session";
 import { goRoom, lockNav, renderShell, setApiPill, setGateMode, unlockNav, type Room } from "./ui/shell";
-import { renderUnlock } from "./ui/unlock";
+import { renderLanding } from "./ui/landing";
 import { renderChamber } from "./ui/chamber";
 import { renderClock, renderForge, renderGold, renderHome, renderHub, renderMap } from "./ui/rooms";
 import { renderPulse } from "./ui/pulse";
+import { renderStage } from "./ui/stage";
 import { deleteNote, patchNote } from "./api/life";
 import { ApiError } from "./api/client";
 import { guard, openRowEditor, say } from "./ui/dom";
-import { animateAppChrome, animateRoom, animateVault, type MotionHandle } from "./motion/ragiMotion";
+import { animateAppChrome, animateRoom, type MotionHandle } from "./motion/ragiMotion";
 
 type NoteRow = { id: string; title: string; body: string };
 
@@ -19,8 +20,9 @@ export async function startApp(root: HTMLElement) {
   let unlocked = isUnlocked();
   let disposeChamber: (() => void) | null = null;
   let disposePulse: (() => void) | null = null;
+  let disposeStage: (() => void) | null = null;
+  let disposeLanding: (() => void) | null = null;
   let roomMotion: MotionHandle | null = null;
-  let vaultMotion: MotionHandle | null = null;
   let notesById = new Map<string, NoteRow>();
 
   function playRoomMotion(target: HTMLElement) {
@@ -165,6 +167,8 @@ export async function startApp(root: HTMLElement) {
     if (!unlocked) return;
     disposePulse?.();
     disposePulse = null;
+    disposeStage?.();
+    disposeStage = null;
     let stage: HTMLElement | null = null;
     if (room === "home") {
       await renderHome(shell.home);
@@ -185,6 +189,9 @@ export async function startApp(root: HTMLElement) {
     if (room === "pulse") {
       disposePulse = await renderPulse(shell.pulse);
       /* motion triggered from pulse paint via ragi:motion */
+    }
+    if (room === "stage") {
+      disposeStage = renderStage(shell.stage);
     }
     if (room === "hub") {
       await renderHub(shell.hub);
@@ -220,9 +227,9 @@ export async function startApp(root: HTMLElement) {
 
   async function enterApp() {
     unlocked = true;
+    disposeLanding?.();
+    disposeLanding = null;
     unlockNav(shell);
-    vaultMotion?.dispose();
-    vaultMotion = null;
     animateAppChrome(shell.root);
     goRoom("home", shell, unlocked);
     disposeChamber?.();
@@ -247,11 +254,10 @@ export async function startApp(root: HTMLElement) {
 
   function bootVault() {
     setGateMode(shell, true);
-    renderUnlock(shell.vault, () => {
+    disposeLanding?.();
+    disposeLanding = renderLanding(shell.vault, () => {
       void enterApp();
     });
-    vaultMotion?.dispose();
-    vaultMotion = animateVault(shell.vault);
   }
 
   bootVault();
