@@ -7,7 +7,7 @@ export async function renderChamber(root: HTMLElement, _onLogout: () => void) {
   root.innerHTML = `
     <header class="page-head">
       <h2 class="page-title" tabindex="-1">Ask RAGI</h2>
-      <p class="page-sub">Talk or type. RAGI answers from your sealed account.</p>
+      <p class="page-sub">Your secretary — answers from your vault, tasks, and linked GitHub performance.</p>
     </header>
     <p class="msg" data-room-msg role="status"></p>
 
@@ -127,7 +127,10 @@ export async function renderChamber(root: HTMLElement, _onLogout: () => void) {
   });
 
   void refresh();
-  addChat("ragi", "Hi — ask me about your day, work, money, or schedule.");
+  addChat(
+    "ragi",
+    "Hi — I can brief your day, prioritize tasks, and read GitHub production, pace, time management, and error pressure. Try: “How is my GitHub performance?”",
+  );
 
   return () => {
     mic.stop();

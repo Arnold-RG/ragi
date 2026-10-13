@@ -5,7 +5,8 @@
 import { isLocalToken, readLocalSession } from "./localAuth";
 import { getToken } from "../state/session";
 import type { Dashboard } from "../api/life";
-import type { GhProject } from "../api/github";
+import type { GhProject, GithubReposResponse } from "../api/github";
+import { analyzeGithub, clearGithubIntelCache } from "./githubIntel";
 
 const DB_NAME = "ragi-life";
 const DB_VERSION = 1;
@@ -496,27 +497,7 @@ export async function localDeleteNote(noteId: string) {
   return { ok: true };
 }
 
-function estimateProgress(repo: {
-  pushed_at: string | null;
-  stargazers_count: number;
-  fork: boolean;
-  archived: boolean;
-}): number {
-  if (repo.archived) return 100;
-  const days = repo.pushed_at
-    ? Math.max(0, (Date.now() - new Date(repo.pushed_at).getTime()) / 86_400_000)
-    : 365;
-  let p = 35;
-  if (days < 7) p = 72;
-  else if (days < 30) p = 58;
-  else if (days < 90) p = 45;
-  else if (days > 180) p = 22;
-  if (repo.stargazers_count > 10) p += 8;
-  if (repo.fork) p -= 10;
-  return Math.max(5, Math.min(95, Math.round(p)));
-}
-
-export async function localListGithubRepos() {
+export async function localListGithubRepos(): Promise<GithubReposResponse> {
   const board = await load();
   if (!board.githubLogin) {
     return {
@@ -531,62 +512,24 @@ export async function localListGithubRepos() {
     };
   }
 
-  const res = await fetch(
-    `https://api.github.com/users/${encodeURIComponent(board.githubLogin)}/repos?per_page=40&sort=updated`,
-    { headers: { Accept: "application/vnd.github+json" } },
-  );
-  if (!res.ok) throw new Error("GitHub did not answer.");
-  const repos = (await res.json()) as Array<{
-    name: string;
-    full_name: string;
-    html_url: string;
-    description: string | null;
-    language: string | null;
-    pushed_at: string | null;
-    stargazers_count: number;
-    fork: boolean;
-    archived: boolean;
-  }>;
-
-  const projects: GhProject[] = repos.map((r) => {
-    const auto = estimateProgress(r);
-    const overridden = Object.prototype.hasOwnProperty.call(board.githubProgress, r.full_name);
-    const progress = overridden ? board.githubProgress[r.full_name]! : auto;
-    return {
-      name: r.name,
-      fullName: r.full_name,
-      url: r.html_url,
-      description: r.description ?? "",
-      language: r.language,
-      progress,
-      remaining: 100 - progress,
-      autoProgress: auto,
-      overridden,
-      pushedAt: r.pushed_at ?? "",
-      stars: r.stargazers_count,
-      fork: r.fork,
-    };
-  });
-
-  const avg = projects.length
-    ? Math.round(projects.reduce((s, p) => s + p.progress, 0) / projects.length)
-    : 0;
-
+  const intel = await analyzeGithub(board.githubLogin, board.githubProgress);
   return {
-    login: board.githubLogin,
-    fetchedAt: new Date().toISOString(),
+    login: intel.login,
+    fetchedAt: intel.fetchedAt,
     authenticated: false,
     needsLogin: false,
-    count: projects.length,
-    avgProgress: avg,
-    avgRemaining: 100 - avg,
-    projects,
+    count: intel.count,
+    avgProgress: intel.avgProgress,
+    avgRemaining: intel.avgRemaining,
+    projects: intel.projects,
+    intel,
   };
 }
 
 export async function localSetGithubLogin(login: string) {
   const board = await load();
   board.githubLogin = login.trim().replace(/^@/, "");
+  clearGithubIntelCache();
   await save(board);
   return { login: board.githubLogin };
 }
@@ -595,6 +538,7 @@ export async function localSetGithubProgress(fullName: string, progress: number)
   const board = await load();
   const p = Math.max(0, Math.min(100, Math.round(progress)));
   board.githubProgress[fullName] = p;
+  clearGithubIntelCache(board.githubLogin ?? undefined);
   await save(board);
   return { fullName, progress: p, remaining: 100 - p };
 }

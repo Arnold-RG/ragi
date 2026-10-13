@@ -275,36 +275,68 @@ export async function renderForge(root: HTMLElement) {
   const dash = await loadDash(root);
   if (!dash) return;
 
-  let ghBlock = `<p class="quiet">Connect a GitHub username below to track public repositories.</p>
+  let ghBlock = `<div class="board-section-head">
+      <h3>Connect GitHub</h3>
+      <p>Public username — RAGI measures production, pace, time, and errors</p>
+    </div>
+    <p class="quiet">Enter your GitHub username (example: Arnold-RG). RAGI reads public repos, push cadence, and issue pressure.</p>
     <form class="inline-form" id="ghLoginForm">
-      <label class="field"><span>GitHub username</span><input id="ghLogin" maxlength="39" autocomplete="off" spellcheck="false" placeholder="your-github" /></label>
+      <label class="field"><span>GitHub username</span><input id="ghLogin" maxlength="39" autocomplete="off" spellcheck="false" placeholder="Arnold-RG" /></label>
       <button type="submit" class="primary">Connect</button>
     </form>`;
+  let ghIntelStrip = "";
   try {
     const gh = await listGithubRepos();
     if (!gh.needsLogin && gh.login) {
+      const intel = gh.intel;
+      if (intel) {
+        ghIntelStrip = `
+          <section class="panel-card" style="margin-bottom:0.25rem">
+            <div class="board-section-head">
+              <h3>GitHub performance — @${esc(intel.login)}</h3>
+              <p>Updated ${esc(new Date(intel.fetchedAt).toLocaleString())}</p>
+            </div>
+            <div class="board-strip">
+              <article class="board-metric"><p class="label">Production</p><p class="value">${intel.productionPercent}%</p><p class="note">Completion signal</p></article>
+              <article class="board-metric"><p class="label">Performance</p><p class="value">${intel.performanceScore}</p><p class="note">Pace / 100</p></article>
+              <article class="board-metric"><p class="label">Time mgmt</p><p class="value">${intel.timeManagementScore}</p><p class="note">Consistency / 100</p></article>
+              <article class="board-metric"><p class="label">Error pressure</p><p class="value">${intel.errorRatePercent}%</p><p class="note">Open-issue load</p></article>
+            </div>
+            <ul class="detail-list">
+              <li><span>Repos</span><b>${intel.stats.repoCount}</b></li>
+              <li><span>Active (7d)</span><b>${intel.stats.activeRepos7d}</b></li>
+              <li><span>Stale (30d+)</span><b>${intel.stats.staleRepos30d}</b></li>
+              <li><span>Commits ~14d</span><b>${intel.stats.commitsApprox14d}</b></li>
+              <li><span>Issues sample</span><b>${intel.stats.openIssuesSample} open / ${intel.stats.closedIssuesSample} closed</b></li>
+            </ul>
+            <ul class="feedback-list">
+              ${intel.feedback.map((f) => `<li>${esc(f)}</li>`).join("")}
+            </ul>
+          </section>`;
+      }
       ghBlock = `
+        ${ghIntelStrip}
         <div class="board-section-head">
           <h3>GitHub repositories</h3>
-          <p>${esc(gh.login)} · avg ${gh.avgProgress}% done</p>
+          <p>@${esc(gh.login)} · avg ${gh.avgProgress}% done · ${gh.count} repos</p>
         </div>
         <form class="inline-form" id="ghLoginForm">
           <label class="field"><span>GitHub username</span><input id="ghLogin" value="${esc(gh.login)}" maxlength="39" autocomplete="off" spellcheck="false" /></label>
-          <button type="submit" class="ghost">Update</button>
+          <button type="submit" class="ghost">Refresh</button>
         </form>
         <ul class="jobs gh-list" style="margin-top:0.75rem">
           ${
             gh.projects.length
               ? gh.projects
-                  .slice(0, 8)
+                  .slice(0, 12)
                   .map(
                     (p) => `<li class="gh-row">
                       <div class="gh-head">
                         <a href="${esc(p.url)}" target="_blank" rel="noreferrer">${esc(p.name)}</a>
-                        <span>${p.progress}% done · ${p.remaining}% left</span>
+                        <span>${p.progress}% done · ${p.remaining}% left${p.daysSincePush != null ? ` · ${p.daysSincePush}d` : ""}</span>
                       </div>
                       ${meter(p.name, p.progress)}
-                      <p class="gh-meta">${esc(p.language || "No language")} · ${esc((p.description || "").slice(0, 100))}</p>
+                      <p class="gh-meta">${esc(p.language || "No language")}${p.openIssues != null ? ` · ${p.openIssues} open issues` : ""} · ${esc((p.description || "").slice(0, 100))}</p>
                       <form class="inline-form" data-ghprog="${esc(p.fullName)}">
                         <label class="field"><span>Set % done</span><input type="number" min="0" max="100" value="${p.progress}" /></label>
                         <button type="submit" class="ghost">Save</button>
@@ -316,12 +348,16 @@ export async function renderForge(root: HTMLElement) {
           }
         </ul>`;
     }
-  } catch {
-    ghBlock = `<p class="msg bad">GitHub is unreachable from this session. You can still manage personal projects below.</p>`;
+  } catch (err) {
+    ghBlock = `<p class="msg bad">${esc(err instanceof Error ? err.message : "GitHub is unreachable.")}</p>
+      <form class="inline-form" id="ghLoginForm">
+        <label class="field"><span>GitHub username</span><input id="ghLogin" maxlength="39" autocomplete="off" spellcheck="false" placeholder="Arnold-RG" /></label>
+        <button type="submit" class="primary">Retry</button>
+      </form>`;
   }
 
   root.innerHTML = `
-    ${roomHead("", "Work", "Personal projects, productivity, GitHub repos, and the tasks that move them.")}
+    ${roomHead("", "Work", "Personal projects, GitHub production analytics, tasks, and goals — your operating desk.")}
     <div class="board">
       ${productivityStrip(dash)}
       <section class="board-section">

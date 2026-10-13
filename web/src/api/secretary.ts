@@ -2,12 +2,24 @@ import { api } from "./client";
 import { getToken } from "../state/session";
 import { isLocalToken } from "../vault/localAuth";
 import { localCreateNote, localListNotes } from "../vault/localLife";
+import {
+  localChatAi,
+  localGetBriefing,
+  localGetMode,
+  localSetMode,
+} from "../vault/localSecretary";
+
+function useLocal() {
+  return isLocalToken(getToken());
+}
 
 export function getMode() {
+  if (useLocal()) return localGetMode();
   return api<{ mode: string }>("/api/v1/mode");
 }
 
 export function setMode(mode: "work" | "personal") {
+  if (useLocal()) return localSetMode(mode);
   return api<{ mode: string }>("/api/v1/mode", {
     method: "PUT",
     body: JSON.stringify({ mode }),
@@ -15,6 +27,7 @@ export function setMode(mode: "work" | "personal") {
 }
 
 export function getBriefing() {
+  if (useLocal()) return localGetBriefing();
   return api<{
     source: string;
     generatedAt: string;
@@ -62,6 +75,7 @@ export function createFocus(input: { label: string; startsAt: string; endsAt: st
 }
 
 export function chatAi(message: string, mode?: "work" | "personal") {
+  if (useLocal()) return localChatAi(message, mode);
   return api<{ reply: string; mode: string; model: string; signal?: string }>("/api/v1/ai/chat", {
     method: "POST",
     body: JSON.stringify({ message, mode }),

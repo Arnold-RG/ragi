@@ -7,6 +7,8 @@ import {
   localSetGithubProgress,
 } from "../vault/localLife";
 
+import type { GithubIntel } from "../vault/githubIntel";
+
 export type GhProject = {
   name: string;
   fullName: string;
@@ -20,20 +22,25 @@ export type GhProject = {
   pushedAt: string;
   stars: number;
   fork: boolean;
+  openIssues?: number;
+  daysSincePush?: number;
+};
+
+export type GithubReposResponse = {
+  login: string;
+  fetchedAt: string;
+  authenticated: boolean;
+  needsLogin?: boolean;
+  count: number;
+  avgProgress: number;
+  avgRemaining: number;
+  projects: GhProject[];
+  intel?: GithubIntel;
 };
 
 export function listGithubRepos() {
   if (isLocalToken(getToken())) return localListGithubRepos();
-  return api<{
-    login: string;
-    fetchedAt: string;
-    authenticated: boolean;
-    needsLogin?: boolean;
-    count: number;
-    avgProgress: number;
-    avgRemaining: number;
-    projects: GhProject[];
-  }>("/api/v1/github/repos");
+  return api<GithubReposResponse>("/api/v1/github/repos");
 }
 
 export function setGithubLogin(login: string) {
