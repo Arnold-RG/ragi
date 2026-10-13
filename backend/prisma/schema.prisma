@@ -12,6 +12,7 @@ model Owner {
   id                String   @id @default(cuid())
   email             String?  @unique
   passwordHash      String?
+  recoveryHash      String?
   githubLogin       String?
   handle            String   @unique
   passphraseHash    String?

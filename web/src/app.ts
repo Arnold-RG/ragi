@@ -1,5 +1,5 @@
 import { pingHealth } from "./api/client";
-import { logout, me } from "./api/auth";
+import { changePassword, logout, me } from "./api/auth";
 import { createNote, listNotes } from "./api/secretary";
 import {
   exportVault,
@@ -8,7 +8,8 @@ import {
   storageStatus,
   takeSnapshot,
 } from "./api/storage";
-import { isUnlocked, clearSession } from "./state/session";
+import { isUnlocked, clearSession, getSessionMeta, getToken } from "./state/session";
+import { isLocalToken } from "./vault/localAuth";
 import { goRoom, lockNav, renderShell, setApiPill, setGateMode, unlockNav, type Room } from "./ui/shell";
 import { renderUnlock } from "./ui/unlock";
 import { renderChamber } from "./ui/chamber";
@@ -225,6 +226,25 @@ export async function startApp(root: HTMLElement) {
     });
   });
 
+  shell.den.querySelector("#passwordForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!unlocked) return;
+    const currentPassword = (shell.den.querySelector("#pwCurrent") as HTMLInputElement).value;
+    const newPassword = (shell.den.querySelector("#pwNew") as HTMLInputElement).value;
+    const confirm = (shell.den.querySelector("#pwNew2") as HTMLInputElement).value;
+    if (newPassword !== confirm) {
+      say(shell.den, "The two new passwords do not match.", "bad");
+      return;
+    }
+    void guard(shell.den, async () => {
+      await changePassword({ currentPassword, newPassword });
+      (shell.den.querySelector("#pwCurrent") as HTMLInputElement).value = "";
+      (shell.den.querySelector("#pwNew") as HTMLInputElement).value = "";
+      (shell.den.querySelector("#pwNew2") as HTMLInputElement).value = "";
+      say(shell.den, "Password updated and sealed.", "good");
+    });
+  });
+
   async function paintRoom(room: Room) {
     if (!unlocked) return;
     if (room === "home") await renderHome(shell.home);
@@ -265,13 +285,17 @@ export async function startApp(root: HTMLElement) {
       bootVault();
       goRoom("vault", shell, false);
     });
-    await refreshDen();
+    if (!isLocalToken(getToken())) {
+      await refreshDen();
+    }
     try {
       const profile = await me();
       const mode = profile.mode === "personal" ? "personal" : "work";
-      shell.hpLine.textContent = `${profile.handle} · ${mode}`;
+      const seal = isLocalToken(getToken()) ? "device vault" : mode;
+      shell.hpLine.textContent = `${profile.handle} · ${seal}`;
     } catch {
-      shell.hpLine.textContent = "Session weak";
+      const meta = getSessionMeta();
+      shell.hpLine.textContent = meta?.handle ? `${meta.handle} · sealed` : "Session weak";
     }
   }
 

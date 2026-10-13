@@ -274,6 +274,43 @@ body.is-gate {
 
 .gate-dock .stack { max-width: none; }
 .gate-dock .msg { margin-bottom: 0.75rem; }
+.gate-dock .auth-mode { margin: 0 0 0.85rem; }
+
+.recovery-box {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(232, 184, 106, 0.35);
+  background: rgba(20, 14, 6, 0.55);
+}
+.recovery-box h3 {
+  margin: 0 0 0.45rem;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  color: var(--amber);
+}
+.recovery-box p {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.recovery-box code {
+  display: block;
+  margin: 0 0 0.85rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(4, 8, 14, 0.8);
+  color: var(--cyan);
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  word-break: break-all;
+  user-select: all;
+}
+
+.auth-switch {
+  flex-wrap: wrap;
+}
 
 /* —— Mast / brand (app mode) —— */
 .mast {

@@ -115,6 +115,16 @@ export function renderShell(root: HTMLElement) {
                 <button type="submit" id="noteAdd" class="primary">Inscribe</button>
               </form>
             </section>
+            <section class="stat-box wide">
+              <h3>Change password</h3>
+              <p class="hint">Use this when you still know the current password. Forgot? Use the vault Forgot tab with your recovery key.</p>
+              <form class="stack" id="passwordForm">
+                <label class="field"><span>Current password</span><input id="pwCurrent" type="password" autocomplete="current-password" required minlength="1" maxlength="128" /></label>
+                <label class="field"><span>New password</span><input id="pwNew" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
+                <label class="field"><span>Confirm new password</span><input id="pwNew2" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
+                <button type="submit" class="primary">Update password</button>
+              </form>
+            </section>
           </div>
           <p class="hint">A restore merges into this account only.</p>
         </section>
@@ -172,11 +182,11 @@ export function setApiPill(el: HTMLElement, ok: boolean) {
   const origin = el.querySelector(".api-origin");
   const reachable = pageCanReachApi();
   if (!reachable) {
-    if (state) state.textContent = "API offline";
-    if (origin) origin.textContent = "Set VITE_API_ORIGIN to connect accounts.";
-    el.classList.remove("ok");
-    el.classList.add("bad");
-    el.title = "This deploy has no API origin yet.";
+    if (state) state.textContent = "Device vault";
+    if (origin) origin.textContent = "Accounts seal on this browser. API optional.";
+    el.classList.remove("bad");
+    el.classList.add("ok");
+    el.title = "Encrypted local accounts are active. Connect VITE_API_ORIGIN for the full server vault.";
     return;
   }
   if (state) state.textContent = ok ? "Vault link up" : "Vault link down";

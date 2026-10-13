@@ -1,12 +1,19 @@
 import { Prisma } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "../../shared/db.js";
 import { hashSecret, newSalt, sha256Hex, verifySecret } from "../../shared/crypto.js";
 import { env } from "../../shared/config.js";
 import { cacheGet } from "../../shared/redis.js";
 import { audit } from "../../shared/security/audit.js";
+import { createSnapshot } from "../../shared/storage/snapshots.js";
 import { clearFails, registerFail } from "./lib/challenges.js";
 import { createSession } from "./lib/session.js";
+
+function mintRecoveryKey() {
+  const raw = randomBytes(18).toString("base64url").toUpperCase();
+  return `RAGI-${raw.slice(0, 8)}-${raw.slice(8, 16)}-${raw.slice(16, 24)}`;
+}
 
 const RESERVED = new Set(["admin", "owner", "root", "ragi", "support", "api", "system"]);
 
@@ -102,6 +109,8 @@ export async function registerAccount(input: {
 
   const vaultSalt = newSalt(24);
   const passwordHash = await hashSecret(input.password);
+  const recoveryKey = mintRecoveryKey();
+  const recoveryHash = await hashSecret(recoveryKey);
 
   let owner;
   try {
@@ -110,6 +119,7 @@ export async function registerAccount(input: {
         email: input.email,
         handle: input.handle,
         passwordHash,
+        recoveryHash,
         vaultSalt,
         modeState: { create: { mode: "work" } },
       },
@@ -128,6 +138,12 @@ export async function registerAccount(input: {
       return { ok: false as const, status: 409, error: "handle_taken", message: "That name is already in use." };
     }
     throw err;
+  }
+
+  try {
+    await createSnapshot(owner.id, "register");
+  } catch {
+    /* snapshot is best-effort; account row already durable */
   }
 
   const session = await createSession({
@@ -152,6 +168,7 @@ export async function registerAccount(input: {
     expiresAt: session.expiresAt.toISOString(),
     handle: owner.handle,
     email: owner.email,
+    recoveryKey,
   };
 }
 
@@ -218,6 +235,124 @@ export async function loginAccount(input: {
     userAgent: input.userAgent,
   });
 
+  return {
+    ok: true as const,
+    token: session.token,
+    expiresAt: session.expiresAt.toISOString(),
+    handle: owner.handle,
+    email: owner.email,
+  };
+}
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: z.string().min(12, "Use at least 12 characters.").max(128),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email.")
+    .max(254)
+    .transform((s) => s.toLowerCase()),
+  recoveryKey: z.string().trim().min(12).max(80),
+  newPassword: z.string().min(12, "Use at least 12 characters.").max(128),
+});
+
+export async function changePassword(input: {
+  ownerId: string;
+  currentPassword: string;
+  newPassword: string;
+  ip: string;
+  userAgent: string;
+}) {
+  const owner = await db.owner.findUnique({ where: { id: input.ownerId } });
+  if (!owner?.passwordHash) {
+    return { ok: false as const, status: 400, error: "no_password", message: "This account has no password." };
+  }
+  const match = await verifySecret(owner.passwordHash, input.currentPassword);
+  if (!match) {
+    return {
+      ok: false as const,
+      status: 401,
+      error: "invalid_credentials",
+      message: "Current password is not right.",
+    };
+  }
+  const weak = passwordProblem(input.newPassword, owner.email ?? "", owner.handle);
+  if (weak) {
+    return { ok: false as const, status: 400, error: "weak_password", message: weak };
+  }
+  const passwordHash = await hashSecret(input.newPassword);
+  await db.owner.update({ where: { id: owner.id }, data: { passwordHash } });
+  try {
+    await createSnapshot(owner.id, "password-change");
+  } catch {
+    /* best-effort */
+  }
+  await audit({
+    ownerId: owner.id,
+    action: "auth.password_change",
+    outcome: "ok",
+    vaultSalt: owner.vaultSalt,
+    ip: input.ip,
+    userAgent: input.userAgent,
+  });
+  return { ok: true as const };
+}
+
+export async function resetPassword(input: {
+  email: string;
+  recoveryKey: string;
+  newPassword: string;
+  ip: string;
+  userAgent: string;
+}) {
+  const owner = await db.owner.findUnique({ where: { email: input.email } });
+  if (!owner?.recoveryHash || !owner.passwordHash) {
+    return {
+      ok: false as const,
+      status: 401,
+      error: "reset_denied",
+      message: "No account matches that email and recovery key.",
+    };
+  }
+  const ok = await verifySecret(owner.recoveryHash, input.recoveryKey.trim().toUpperCase());
+  if (!ok) {
+    await registerFail(`ip:${input.ip}`);
+    return {
+      ok: false as const,
+      status: 401,
+      error: "reset_denied",
+      message: "No account matches that email and recovery key.",
+    };
+  }
+  const weak = passwordProblem(input.newPassword, owner.email ?? "", owner.handle);
+  if (weak) {
+    return { ok: false as const, status: 400, error: "weak_password", message: weak };
+  }
+  const passwordHash = await hashSecret(input.newPassword);
+  await db.owner.update({ where: { id: owner.id }, data: { passwordHash } });
+  try {
+    await createSnapshot(owner.id, "password-reset");
+  } catch {
+    /* best-effort */
+  }
+  const session = await createSession({
+    ownerId: owner.id,
+    gatesPassed: ["password"],
+    ip: input.ip,
+    userAgent: input.userAgent,
+  });
+  await audit({
+    ownerId: owner.id,
+    action: "auth.password_reset",
+    outcome: "ok",
+    vaultSalt: owner.vaultSalt,
+    ip: input.ip,
+    userAgent: input.userAgent,
+  });
   return {
     ok: true as const,
     token: session.token,

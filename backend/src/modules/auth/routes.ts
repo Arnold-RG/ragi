@@ -13,7 +13,17 @@ import {
   saveLoginChallenge,
 } from "./lib/challenges.js";
 import { createSession, readSession, revokeSession, type GateId } from "./lib/session.js";
-import { isLocked, loginAccount, loginSchema, registerAccount, registerSchema } from "./accounts.js";
+import {
+  changePassword,
+  changePasswordSchema,
+  isLocked,
+  loginAccount,
+  loginSchema,
+  registerAccount,
+  registerSchema,
+  resetPassword,
+  resetPasswordSchema,
+} from "./accounts.js";
 import { env } from "../../shared/config.js";
 import {
   authenticationOptions,
@@ -64,7 +74,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const result = await registerAccount({ ...parsed.data, ...meta });
     if (!result.ok) return reply.code(result.status).send({ error: result.error, message: result.message });
     setSessionCookie(reply, result.token);
-    return { ok: true, token: result.token, expiresAt: result.expiresAt, handle: result.handle };
+    return {
+      ok: true,
+      token: result.token,
+      expiresAt: result.expiresAt,
+      handle: result.handle,
+      recoveryKey: result.recoveryKey,
+    };
   });
 
   app.post("/api/v1/auth/login", authLimit, async (req, reply) => {
@@ -254,6 +270,39 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       totpVerified: owner.totpVerified,
       mode: mode?.mode ?? "work",
     };
+  });
+
+  app.post("/api/v1/auth/password/change", { preHandler: app.requireOwner, config: authLimit.config }, async (req, reply) => {
+    const meta = clientMeta(req);
+    const parsed = changePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "validation_failed",
+        message: parsed.error.issues[0]?.message ?? "Check the form and try again.",
+      });
+    }
+    const result = await changePassword({
+      ownerId: req.ragiOwnerId!,
+      ...parsed.data,
+      ...meta,
+    });
+    if (!result.ok) return reply.code(result.status).send({ error: result.error, message: result.message });
+    return { ok: true };
+  });
+
+  app.post("/api/v1/auth/password/reset", authLimit, async (req, reply) => {
+    const meta = clientMeta(req);
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "validation_failed",
+        message: parsed.error.issues[0]?.message ?? "Check the form and try again.",
+      });
+    }
+    const result = await resetPassword({ ...parsed.data, ...meta });
+    if (!result.ok) return reply.code(result.status).send({ error: result.error, message: result.message });
+    setSessionCookie(reply, result.token);
+    return { ok: true, token: result.token, expiresAt: result.expiresAt, handle: result.handle };
   });
 
   app.post("/api/v1/auth/logout", { preHandler: app.requireOwner }, async (req, reply) => {
