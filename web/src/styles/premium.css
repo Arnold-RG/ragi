@@ -274,7 +274,150 @@ body.is-gate {
 
 .gate-dock .stack { max-width: none; }
 .gate-dock .msg { margin-bottom: 0.75rem; }
-.gate-dock .auth-mode { margin: 0 0 0.85rem; }
+.gate-dock .auth-mode { margin: 0 0 1rem; }
+
+/* —— Professional login bar —— */
+.login-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.95rem;
+  border-bottom: 1px solid rgba(140, 190, 220, 0.12);
+}
+
+.login-bar-kicker {
+  margin: 0 0 0.15rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.login-bar-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.login-bar-seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(140, 190, 220, 0.18);
+  background: rgba(4, 10, 16, 0.55);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.login-bar-dot {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 10px rgba(109, 255, 176, 0.55);
+}
+
+.auth-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem;
+  padding: 0.28rem;
+  margin-bottom: 1.05rem;
+  border-radius: 14px;
+  border: 1px solid rgba(140, 190, 220, 0.18);
+  background: rgba(4, 8, 14, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.auth-rail.is-recover {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.auth-rail-tab {
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.72rem 0.65rem;
+  border-radius: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  transition: color 0.2s ease;
+}
+
+.auth-rail-tab:hover {
+  color: var(--text);
+}
+
+.auth-rail-tab[aria-selected="true"] {
+  color: #041018;
+}
+
+.auth-rail-tab[hidden] {
+  display: none !important;
+}
+
+.auth-rail-glider {
+  position: absolute;
+  top: 0.28rem;
+  left: 0;
+  bottom: 0.28rem;
+  z-index: 0;
+  width: calc(50% - 0.28rem);
+  border-radius: 11px;
+  background: linear-gradient(135deg, #8ae6ff 0%, #4fd0ff 42%, #e8b86a 128%);
+  box-shadow: 0 8px 22px rgba(79, 208, 255, 0.28);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.auth-forgot {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--cyan);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0.15rem 0;
+  margin-top: 0.15rem;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+.auth-forgot:hover {
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.auth-actions {
+  margin-top: 0.15rem;
+}
+
+.auth-actions .primary {
+  min-width: 8.5rem;
+}
 
 .recovery-box {
   margin-top: 0.5rem;
@@ -306,10 +449,6 @@ body.is-gate {
   letter-spacing: 0.04em;
   word-break: break-all;
   user-select: all;
-}
-
-.auth-switch {
-  flex-wrap: wrap;
 }
 
 /* —— Mast / brand (app mode) —— */
@@ -547,35 +686,18 @@ body.is-gate {
 .msg.bad { color: var(--danger); }
 .msg.good { color: var(--ok); }
 
-/* —— Auth —— */
-.auth-switch {
-  display: inline-flex;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--glass);
-  margin-bottom: 1rem;
-}
-
-.auth-switch button {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  padding: 0.55rem 1rem;
-  border-radius: 999px;
-  cursor: pointer;
-  font-weight: 600;
-  font-family: inherit;
-}
-
-.auth-switch button[aria-selected="true"] {
-  background: linear-gradient(135deg, rgba(79, 208, 255, 0.25), rgba(232, 184, 106, 0.18));
-  color: var(--text);
-}
-
+/* —— Auth forms —— */
 .stack { display: grid; gap: 0.75rem; max-width: 28rem; }
+
+.auth-form .field span {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.auth-form .field input::placeholder {
+  color: rgba(155, 176, 194, 0.45);
+}
 
 .field {
   display: grid;
