@@ -14,6 +14,21 @@ export const githubRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  app.put("/api/v1/github/login", async (req) => {
+    const body = z
+      .object({
+        login: z
+          .string()
+          .trim()
+          .max(39)
+          .refine((s) => s === "" || /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(s), {
+            message: "That does not look like a GitHub username.",
+          }),
+      })
+      .parse(req.body);
+    return github.setGithubLogin(req.ragiOwnerId!, body.login);
+  });
+
   app.put("/api/v1/github/progress", async (req) => {
     const body = z
       .object({

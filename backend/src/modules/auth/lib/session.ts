@@ -6,7 +6,7 @@ import { randomToken, sha256Hex } from "../../../shared/crypto.js";
 
 const secret = () => new TextEncoder().encode(env.RAGI_SESSION_SECRET);
 
-export type GateId = "passphrase" | "totp_or_backup" | "device_or_passkey";
+export type GateId = "passphrase" | "totp_or_backup" | "device_or_passkey" | "password";
 
 export async function createSession(input: {
   ownerId: string;
@@ -90,4 +90,9 @@ export function requireFullGates(gates: GateId[]): boolean {
     gates.includes("totp_or_backup") &&
     gates.includes("device_or_passkey")
   );
+}
+
+/** Password accounts, and the legacy triple seal, both open a member session. */
+export function sessionIsAuthed(gates: GateId[]): boolean {
+  return gates.includes("password") || requireFullGates(gates);
 }

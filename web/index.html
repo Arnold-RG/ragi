@@ -2,20 +2,48 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>RAGI // Dark Age OS</title>
-    <meta name="description" content="RAGI — owner-only private secretary terminal" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>RAGI — a private secretary</title>
+    <meta
+      name="description"
+      content="RAGI is a private secretary for work, money, time, and notes. Each account is sealed to its owner."
+    />
+    <meta name="theme-color" content="#141210" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="canonical" href="https://arnold-rg.github.io/ragi/" />
+    <link rel="icon" href="%BASE_URL%favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" type="application/xml" href="%BASE_URL%sitemap.xml" />
+    <meta property="og:title" content="RAGI — a private secretary" />
+    <meta
+      property="og:description"
+      content="A private house for your work, money, time, and notes. Sign in with your own account."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://arnold-rg.github.io/ragi/" />
+    <meta property="og:image" content="https://arnold-rg.github.io/ragi/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RAGI — a private secretary" />
+    <meta
+      name="twitter:description"
+      content="A private house for your work, money, time, and notes. Sign in with your own account."
+    />
+    <meta name="twitter:image" content="https://arnold-rg.github.io/ragi/og.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Outfit:wght@300;400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
-    <div class="crt" aria-hidden="true"></div>
-    <div class="crt-glow" aria-hidden="true"></div>
-    <div id="app" class="shell"></div>
+    <noscript>
+      <p style="font-family: Georgia, serif; padding: 2rem; color: #f3eee6; background: #141210;">
+        RAGI needs JavaScript to open the house.
+      </p>
+    </noscript>
+    <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

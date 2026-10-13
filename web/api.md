@@ -4,7 +4,9 @@ Default API: `VITE_API_ORIGIN` (local `http://127.0.0.1:8787`)
 
 | UI action | Backend |
 |-----------|---------|
-| Unlock gate 1–3 | `POST /api/v1/auth/challenge` + `/gate/1|2|3` |
+| Create account | `POST /api/v1/auth/register` |
+| Sign in | `POST /api/v1/auth/login` |
+| Legacy triple seal | `POST /api/v1/auth/challenge` + `/gate/1|2|3` |
 | Session restore | `GET /api/v1/auth/me` |
 | Logout | `POST /api/v1/auth/logout` |
 | Work / Personal | `GET|PUT /api/v1/mode` |
@@ -19,7 +21,7 @@ Default API: `VITE_API_ORIGIN` (local `http://127.0.0.1:8787`)
 | Storage status / snapshots | `GET /api/v1/storage/status` · `/snapshots` · `POST /snapshot` |
 | Export / restore (merge) | `GET /api/v1/storage/export` · `POST /api/v1/storage/restore` |
 | Edit / soft-delete | `PATCH` + `DELETE` on projects, goals, activities, finance, meetings, reminders, emergencies, notes, jobs |
-| GitHub hub | `GET /api/v1/github/repos` · `PUT /api/v1/github/progress` |
+| GitHub hub | `GET /api/v1/github/repos` · `PUT /api/v1/github/login` · `PUT /api/v1/github/progress` |
 | API pill | `GET /health` |
 
 DELETE soft-archives after a vault snapshot — rows stay in the DB.

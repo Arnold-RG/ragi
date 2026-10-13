@@ -20,11 +20,19 @@ export function listGithubRepos() {
     login: string;
     fetchedAt: string;
     authenticated: boolean;
+    needsLogin?: boolean;
     count: number;
     avgProgress: number;
     avgRemaining: number;
     projects: GhProject[];
   }>("/api/v1/github/repos");
+}
+
+export function setGithubLogin(login: string) {
+  return api<{ login: string }>("/api/v1/github/login", {
+    method: "PUT",
+    body: JSON.stringify({ login }),
+  });
 }
 
 export function setGithubProgress(fullName: string, progress: number) {

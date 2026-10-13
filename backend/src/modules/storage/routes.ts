@@ -13,22 +13,44 @@ import { flushVault } from "../../shared/storage/persist.js";
 export const storageRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.requireOwner);
 
-  app.get("/api/v1/storage/status", async () => storageStatus());
+  app.get("/api/v1/storage/status", async (req) => {
+    const st = storageStatus(req.ragiOwnerId!);
+    const latest = st.latestSnapshot;
+    return {
+      engine: st.engine,
+      durable: st.durable,
+      snapshotCount: st.snapshotCount,
+      latestSnapshot: latest
+        ? { id: latest.id, createdAt: latest.createdAt, bytes: latest.bytes }
+        : null,
+      note: "Each account's snapshots are its own. A restore merges into your vault and does not touch anyone else's.",
+    };
+  });
 
   app.get("/api/v1/storage/export", async (req) => exportVault(req.ragiOwnerId!));
 
-  app.get("/api/v1/storage/snapshots", async () => ({ snapshots: listSnapshots() }));
+  app.get("/api/v1/storage/snapshots", async (req) => ({
+    snapshots: listSnapshots(req.ragiOwnerId!).map((s) => ({
+      id: s.id,
+      createdAt: s.createdAt,
+      bytes: s.bytes,
+      counts: s.counts ?? null,
+    })),
+  }));
 
   app.post("/api/v1/storage/snapshot", async (req) => {
     const body = z.object({ reason: z.string().optional() }).parse(req.body ?? {});
     const snap = await createSnapshot(req.ragiOwnerId!, body.reason ?? "manual");
-    return { ok: true, snapshot: snap };
+    return {
+      ok: true,
+      snapshot: { id: snap.id, createdAt: snap.createdAt, bytes: snap.bytes },
+    };
   });
 
   app.get("/api/v1/storage/snapshots/:id", async (req, reply) => {
     const params = z.object({ id: z.string().min(4) }).parse(req.params);
     try {
-      return loadSnapshotJson(params.id);
+      return loadSnapshotJson(params.id, req.ragiOwnerId!);
     } catch {
       return reply.code(404).send({ error: "snapshot_not_found" });
     }
@@ -46,7 +68,7 @@ export const storageRoutes: FastifyPluginAsync = async (app) => {
     let payload: VaultExport | null = null;
     if (body.snapshotId) {
       try {
-        payload = loadSnapshotJson(body.snapshotId) as VaultExport;
+        payload = loadSnapshotJson(body.snapshotId, req.ragiOwnerId!) as VaultExport;
       } catch {
         return reply.code(404).send({ error: "snapshot_not_found" });
       }
@@ -68,8 +90,8 @@ export const storageRoutes: FastifyPluginAsync = async (app) => {
     const snap = await flushVault();
     if (!snap) {
       const forced = await createSnapshot(req.ragiOwnerId!, "flush");
-      return { ok: true, snapshot: forced };
+      return { ok: true, snapshot: { id: forced.id, createdAt: forced.createdAt, bytes: forced.bytes } };
     }
-    return { ok: true, snapshot: snap };
+    return { ok: true, snapshot: { id: snap.id, createdAt: snap.createdAt, bytes: snap.bytes } };
   });
 };

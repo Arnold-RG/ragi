@@ -1,17 +1,12 @@
 import { api } from "./client";
 
 export type StorageStatus = {
-  dataRoot: string;
-  backupsRoot: string;
-  sqlitePath: string | null;
-  sqliteExists: boolean;
   engine: string;
   snapshotCount: number;
   latestSnapshot: {
     id: string;
     createdAt: string;
     bytes: number;
-    counts?: Record<string, number>;
   } | null;
   durable: boolean;
   note: string;

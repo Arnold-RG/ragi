@@ -2,13 +2,22 @@ import { getToken } from "../state/session";
 
 export const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN || "http://127.0.0.1:8787").replace(/\/$/, "");
 
+/** Pages builds with no API origin should not pretend localhost is the public server. */
+export function pageCanReachApi() {
+  const host = location.hostname;
+  const local = host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+  return local || Boolean(import.meta.env.VITE_API_ORIGIN);
+}
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
   constructor(status: number, body: unknown) {
-    const msg =
-      typeof body === "object" && body && "error" in body
-        ? String((body as { error: string }).error)
+    const record = typeof body === "object" && body ? (body as { error?: string; message?: string }) : null;
+    const msg = record?.message
+      ? String(record.message)
+      : record?.error
+        ? String(record.error).replaceAll("_", " ")
         : `http_${status}`;
     super(msg);
     this.status = status;

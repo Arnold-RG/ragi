@@ -37,10 +37,31 @@ export function gate3(challengeId: string, deviceKey: string) {
   );
 }
 
+export function registerAccount(input: { email: string; handle: string; password: string }) {
+  return api<{ ok: boolean; token: string; expiresAt: string; handle: string }>("/api/v1/auth/register", {
+    method: "POST",
+    auth: false,
+    body: JSON.stringify(input),
+  });
+}
+
+export function loginAccount(input: { email: string; password: string }) {
+  return api<{ ok: boolean; token: string; expiresAt: string; handle: string }>("/api/v1/auth/login", {
+    method: "POST",
+    auth: false,
+    body: JSON.stringify(input),
+  });
+}
+
 export function me() {
-  return api<{ handle: string; mode: string; webauthnEnabled: boolean; totpVerified: boolean }>(
-    "/api/v1/auth/me",
-  );
+  return api<{
+    handle: string;
+    email: string | null;
+    githubLogin: string | null;
+    mode: string;
+    webauthnEnabled: boolean;
+    totpVerified: boolean;
+  }>("/api/v1/auth/me");
 }
 
 export function logout() {

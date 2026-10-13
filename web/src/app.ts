@@ -1,5 +1,5 @@
 import { pingHealth } from "./api/client";
-import { me } from "./api/auth";
+import { logout, me } from "./api/auth";
 import { createNote, listNotes } from "./api/secretary";
 import {
   exportVault,
@@ -9,145 +9,220 @@ import {
   takeSnapshot,
 } from "./api/storage";
 import { isUnlocked, clearSession } from "./state/session";
-import { goRoom, renderShell, setApiPill, unlockNav, lockNav, type Room } from "./ui/shell";
+import { goRoom, lockNav, renderShell, setApiPill, unlockNav, type Room } from "./ui/shell";
 import { renderUnlock } from "./ui/unlock";
 import { renderChamber } from "./ui/chamber";
-import {
-  renderClock,
-  renderForge,
-  renderGold,
-  renderHome,
-  renderHub,
-  renderMap,
-} from "./ui/rooms";
+import { renderClock, renderForge, renderGold, renderHome, renderHub, renderMap } from "./ui/rooms";
 import { deleteNote, patchNote } from "./api/life";
+import { ApiError } from "./api/client";
+import { guard, openRowEditor, say } from "./ui/dom";
 
-function esc(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+type NoteRow = { id: string; title: string; body: string };
 
 export async function startApp(root: HTMLElement) {
   const shell = renderShell(root);
   let unlocked = isUnlocked();
   let disposeChamber: (() => void) | null = null;
+  let notesById = new Map<string, NoteRow>();
 
   const healthy = await pingHealth();
   setApiPill(shell.apiPill, healthy);
 
+  function paintClock() {
+    const now = new Date();
+    shell.now.dateTime = now.toISOString();
+    shell.now.textContent = new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(now);
+  }
+  paintClock();
+  const clockDelay = 60_000 - (Date.now() % 60_000) + 200;
+  window.setTimeout(() => {
+    paintClock();
+    window.setInterval(paintClock, 60_000);
+  }, clockDelay);
+
   async function refreshDen() {
     if (!unlocked) return;
-    const list = shell.den.querySelector("#noteList") as HTMLElement | null;
-    const storeStatus = shell.den.querySelector("#storeStatus") as HTMLElement | null;
-    const snapList = shell.den.querySelector("#snapList") as HTMLElement | null;
+    const list = shell.den.querySelector("#noteList");
+    const storeStatus = shell.den.querySelector("#storeStatus");
+    const snapList = shell.den.querySelector("#snapList");
     if (!list || !storeStatus || !snapList) return;
 
     try {
       const res = await listNotes();
-      list.innerHTML = res.notes.length
-        ? res.notes
-            .slice(0, 8)
-            .map(
-              (n) =>
-                `<li class="row-actions"><span>${esc(n.title)}</span>
-                <span class="acts">
-                  <button type="button" data-nedit="${n.id}" data-title="${esc(n.title)}" data-body="${esc(n.body)}">EDIT</button>
-                  <button type="button" data-ndel="${n.id}">DEL</button>
-                </span></li>`,
-            )
-            .join("")
-        : `<li><span>empty ledger</span><span>—</span></li>`;
-
-      list.querySelectorAll<HTMLButtonElement>("[data-nedit]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const title = window.prompt("Note title", btn.dataset.title ?? "");
-          if (title === null) return;
-          const body = window.prompt("Note body", btn.dataset.body ?? "");
-          if (body === null) return;
-          await patchNote(btn.dataset.nedit!, { title, body });
-          await refreshDen();
-        });
-      });
-      list.querySelectorAll<HTMLButtonElement>("[data-ndel]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          if (!window.confirm("Archive note? Snapshot first.")) return;
-          await deleteNote(btn.dataset.ndel!);
-          await refreshDen();
-        });
-      });
+      notesById = new Map(res.notes.map((n) => [n.id, n]));
+      list.replaceChildren();
+      if (!res.notes.length) {
+        const empty = document.createElement("li");
+        empty.className = "entry is-empty";
+        empty.innerHTML = `<p class="entry-title">No notes yet.</p>`;
+        list.append(empty);
+      } else {
+        for (const note of res.notes.slice(0, 8)) {
+          const li = document.createElement("li");
+          li.className = "entry";
+          const copy = document.createElement("div");
+          copy.className = "entry-copy";
+          const title = document.createElement("p");
+          title.className = "entry-title";
+          title.textContent = note.title;
+          const body = document.createElement("p");
+          body.className = "entry-note";
+          body.textContent = note.body;
+          copy.append(title, body);
+          const acts = document.createElement("div");
+          acts.className = "acts";
+          const edit = document.createElement("button");
+          edit.type = "button";
+          edit.className = "ghost";
+          edit.textContent = "Edit";
+          edit.addEventListener("click", () => {
+            const current = notesById.get(note.id);
+            if (!current) return;
+            openRowEditor(
+              li,
+              [
+                { name: "title", label: "Title", value: current.title },
+                { name: "body", label: "Note", value: current.body, multiline: true },
+              ],
+              async (values) => {
+                if (!values.title) throw new ApiError(400, { message: "A note needs a title." });
+                await patchNote(note.id, { title: values.title, body: values.body });
+                await refreshDen();
+              },
+              () => void refreshDen(),
+            );
+          });
+          const del = document.createElement("button");
+          del.type = "button";
+          del.className = "ghost";
+          del.textContent = "Archive";
+          del.addEventListener("click", () => {
+            if (!window.confirm("Archive this note? A snapshot is sealed first.")) return;
+            void guard(shell.den, async () => {
+              await deleteNote(note.id);
+              await refreshDen();
+            });
+          });
+          acts.append(edit, del);
+          li.append(copy, acts);
+          list.append(li);
+        }
+      }
     } catch {
-      list.innerHTML = `<li><span>ledger unreachable</span><span>!</span></li>`;
+      list.replaceChildren();
+      const li = document.createElement("li");
+      li.className = "entry is-empty";
+      li.innerHTML = `<p class="entry-title">The ledger is unreachable.</p>`;
+      list.append(li);
     }
 
     try {
       const st = await storageStatus();
       const latest = st.latestSnapshot
         ? `${st.latestSnapshot.id} · ${new Date(st.latestSnapshot.createdAt).toLocaleString()}`
-        : "none yet";
-      storeStatus.innerHTML = `
-        ENGINE :: ${esc(st.engine)} · DURABLE :: ${st.durable ? "YES" : "NO"}<br/>
-        SNAPSHOTS :: ${st.snapshotCount}<br/>
-        LATEST :: ${esc(latest)}<br/>
-        DATA :: ${esc(st.dataRoot)}<br/>
-        <span style="opacity:0.75">${esc(st.note)}</span>
-      `;
+        : "None yet";
+      storeStatus.replaceChildren();
+      const lines = [
+        `Engine ${st.engine}`,
+        `Durable ${st.durable ? "yes" : "no"}`,
+        `Snapshots ${st.snapshotCount}`,
+        `Latest ${latest}`,
+        st.note,
+      ];
+      for (const line of lines) {
+        const p = document.createElement("p");
+        p.textContent = line;
+        storeStatus.append(p);
+      }
       const snaps = await listSnapshots();
-      snapList.innerHTML = snaps.snapshots.length
-        ? snaps.snapshots
-            .slice(0, 8)
-            .map(
-              (s) =>
-                `<li><span>${esc(s.id)} · ${Math.round(s.bytes / 1024)}kb</span>
-                <button type="button" data-restore="${esc(s.id)}">MERGE</button></li>`,
-            )
-            .join("")
-        : `<li><span>no snapshots yet — seal one</span><span>—</span></li>`;
-
-      snapList.querySelectorAll<HTMLButtonElement>("[data-restore]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const id = btn.dataset.restore!;
-          btn.disabled = true;
-          btn.textContent = "…";
-          try {
-            const r = await restoreSnapshot(id);
-            btn.textContent = `+${r.added}`;
-            await refreshDen();
-          } catch {
-            btn.textContent = "FAIL";
-          }
-        });
-      });
+      snapList.replaceChildren();
+      if (!snaps.snapshots.length) {
+        const li = document.createElement("li");
+        li.className = "entry is-empty";
+        li.innerHTML = `<p class="entry-title">No snapshots yet.</p>`;
+        snapList.append(li);
+      } else {
+        for (const snap of snaps.snapshots.slice(0, 8)) {
+          const li = document.createElement("li");
+          li.className = "entry";
+          const copy = document.createElement("div");
+          copy.className = "entry-copy";
+          const title = document.createElement("p");
+          title.className = "entry-title";
+          title.textContent = snap.id;
+          const meta = document.createElement("p");
+          meta.className = "entry-meta";
+          meta.textContent = `${Math.round(snap.bytes / 1024)} kb`;
+          copy.append(title, meta);
+          const acts = document.createElement("div");
+          acts.className = "acts";
+          const merge = document.createElement("button");
+          merge.type = "button";
+          merge.className = "ghost";
+          merge.textContent = "Merge";
+          merge.addEventListener("click", () => {
+            merge.disabled = true;
+            merge.textContent = "Merging";
+            void restoreSnapshot(snap.id)
+              .then(async (result) => {
+                merge.textContent = `+${result.added}`;
+                await refreshDen();
+              })
+              .catch(() => {
+                merge.textContent = "Failed";
+                merge.disabled = false;
+              });
+          });
+          acts.append(merge);
+          li.append(copy, acts);
+          snapList.append(li);
+        }
+      }
     } catch {
-      storeStatus.textContent = "storage backend unreachable";
+      storeStatus.textContent = "Storage is unreachable.";
     }
   }
 
-  shell.den.querySelector("#noteAdd")?.addEventListener("click", async () => {
+  shell.den.querySelector("#noteForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
     if (!unlocked) return;
     const title = (shell.den.querySelector("#noteTitle") as HTMLInputElement).value.trim();
-    const body = (shell.den.querySelector("#noteBody") as HTMLInputElement).value.trim();
-    if (!title) return;
-    await createNote({ title, body, kind: "note" });
-    (shell.den.querySelector("#noteTitle") as HTMLInputElement).value = "";
-    (shell.den.querySelector("#noteBody") as HTMLInputElement).value = "";
-    await refreshDen();
+    const body = (shell.den.querySelector("#noteBody") as HTMLTextAreaElement).value.trim();
+    if (!title) return say(shell.den, "A note needs a title.", "bad");
+    void guard(shell.den, async () => {
+      await createNote({ title, body, kind: "note" });
+      (shell.den.querySelector("#noteTitle") as HTMLInputElement).value = "";
+      (shell.den.querySelector("#noteBody") as HTMLTextAreaElement).value = "";
+      say(shell.den, "Note inscribed.", "good");
+      await refreshDen();
+    });
   });
 
-  shell.den.querySelector("#snapBtn")?.addEventListener("click", async () => {
+  shell.den.querySelector("#snapBtn")?.addEventListener("click", () => {
     if (!unlocked) return;
-    await takeSnapshot("manual-ui");
-    await refreshDen();
+    void guard(shell.den, async () => {
+      await takeSnapshot("manual-ui");
+      say(shell.den, "Snapshot sealed.", "good");
+      await refreshDen();
+    });
   });
 
-  shell.den.querySelector("#exportBtn")?.addEventListener("click", async () => {
+  shell.den.querySelector("#exportBtn")?.addEventListener("click", () => {
     if (!unlocked) return;
-    const data = await exportVault();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ragi-vault-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    void guard(shell.den, async () => {
+      const data = await exportVault();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ragi-vault-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   });
 
   async function paintRoom(room: Room) {
@@ -161,6 +236,22 @@ export async function startApp(root: HTMLElement) {
     if (room === "den") await refreshDen();
   }
 
+  async function leave() {
+    try {
+      await logout();
+    } catch {
+      /* local session still ends */
+    }
+    disposeChamber?.();
+    disposeChamber = null;
+    clearSession();
+    unlocked = false;
+    lockNav(shell);
+    shell.hpLine.textContent = "Signed out";
+    bootVault();
+    goRoom("vault", shell, false);
+  }
+
   async function enterHall() {
     unlocked = true;
     unlockNav(shell);
@@ -170,15 +261,17 @@ export async function startApp(root: HTMLElement) {
       unlocked = false;
       disposeChamber = null;
       lockNav(shell);
+      shell.hpLine.textContent = "Signed out";
       bootVault();
       goRoom("vault", shell, false);
     });
     await refreshDen();
     try {
       const profile = await me();
-      shell.hpLine.textContent = `HP 14/14 · ${profile.handle.toUpperCase()} · ${profile.mode.toUpperCase()}`;
+      const mode = profile.mode === "personal" ? "personal" : "work";
+      shell.hpLine.textContent = `${profile.handle} · ${mode}`;
     } catch {
-      shell.hpLine.textContent = "HP 14/14 · SESSION WEAK";
+      shell.hpLine.textContent = "Session weak";
     }
   }
 
@@ -197,27 +290,33 @@ export async function startApp(root: HTMLElement) {
     } catch {
       clearSession();
       unlocked = false;
+      lockNav(shell);
     }
   }
+
+  shell.signOut.addEventListener("click", () => {
+    void leave();
+  });
+
+  shell.voidBack.addEventListener("click", () => {
+    goRoom("vault", shell, unlocked, { focus: true });
+  });
 
   shell.navButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const room = btn.dataset.room as Room;
       if (room !== "vault" && room !== "void" && !unlocked) {
-        const msg = shell.vault.querySelector("#lockMsg");
-        if (msg) {
-          msg.textContent = "ROOM LOCKED // CLEAR VAULT FIRST";
-          msg.className = "msg bad";
-        }
+        say(shell.vault, "That room opens after you sign in.", "bad");
         goRoom("vault", shell, unlocked);
         return;
       }
-      goRoom(room, shell, unlocked);
+      goRoom(room, shell, unlocked, { focus: true });
       void paintRoom(room);
     });
   });
 
   window.setInterval(() => {
+    if (document.hidden) return;
     void pingHealth().then((ok) => setApiPill(shell.apiPill, ok));
-  }, 15000);
+  }, 20000);
 }

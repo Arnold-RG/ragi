@@ -7,13 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Sole owner account — RAGI is single-tenant by design.
+/// One row per member. Vault rows hang off this id and never cross accounts.
 model Owner {
   id                String   @id @default(cuid())
-  handle            String   @unique @default("owner")
-  passphraseHash    String
-  backupCodeHash    String
-  deviceKeyHash     String
+  email             String?  @unique
+  passwordHash      String?
+  githubLogin       String?
+  handle            String   @unique
+  passphraseHash    String?
+  backupCodeHash    String?
+  deviceKeyHash     String?
   totpSecretEnc     String?
   totpVerified      Boolean  @default(false)
   webauthnEnabled   Boolean  @default(false)
