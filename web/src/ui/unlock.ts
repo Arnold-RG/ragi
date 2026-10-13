@@ -9,9 +9,8 @@ export function renderUnlock(root: HTMLElement, onUnlocked: () => void) {
       <h2 class="prompt" tabindex="-1">Vault</h2>
     </header>
     <p class="lore">
-      RAGI keeps a private record of work, money, time, and notes.
-      Create an account with your email. The password is stored only as an Argon2id hash.
-      What you write is encrypted for your account and is not readable by anyone else.
+      Step into the sealed chamber. RAGI holds work, money, time, and notes behind Argon2id
+      credentials and per-account encryption — a private hologram only you unlock.
     </p>
     <div class="auth-switch" role="tablist" aria-label="Account">
       <button type="button" id="tabEnter" role="tab" aria-selected="true" aria-controls="enterPanel">Sign in</button>

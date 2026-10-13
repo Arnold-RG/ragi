@@ -6,7 +6,7 @@ Anyone may create an account. Notes, money, projects, and snapshots stay on that
 
 Live chamber: https://arnold-rg.github.io/ragi/
 
-- **Web:** [`web/`](./web/) — Vite + TypeScript · Pages at `/ragi/`
+- **Web:** [`web/`](./web/) — Vite + Three.js cinematic vault · Pages at `/ragi/`
 - **Rooms:** Vault · Hall · **Home** · Forge · Gold · Clock · **Hub (GitHub %)** · Map · Den
 - **Backend:** [`backend/`](./backend/) — see [`backend/ARCHITECTURE.md`](./backend/ARCHITECTURE.md)
 - **Stack:** [`docker-compose.yml`](./docker-compose.yml) — Postgres · Redis · API · optional nginx web

@@ -43,7 +43,7 @@ export function renderShell(root: HTMLElement) {
     <a class="skip" href="#chamber">Skip to the room</a>
     <header class="mast">
       <div class="brand">
-        <p class="eyebrow">Private secretary</p>
+        <p class="eyebrow">Sealed vault · live hologram</p>
         <h1>RAGI</h1>
       </div>
       <div class="mast-meta">
@@ -127,7 +127,7 @@ export function renderShell(root: HTMLElement) {
     </div>
     <footer class="colophon">
       <p>Arnova Group · Arnold-RG</p>
-      <p>Your session stays in this tab. Your vault stays encrypted, on your account alone.</p>
+      <p>3D vault UI · encrypted session · your account alone</p>
     </footer>
   `;
 

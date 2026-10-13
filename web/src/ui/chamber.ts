@@ -16,34 +16,18 @@ import { clearSession } from "../state/session";
 import { say } from "./dom";
 import { createMicWatcher } from "./mic";
 
-function spriteHtml(cls: string, id?: string) {
-  return `
-    <div class="sprite ${cls}" ${id ? `id="${id}"` : ""} aria-hidden="true">
-      <div class="s-head"></div><div class="s-eye"></div><div class="s-eye r"></div>
-      <div class="s-body"></div><div class="s-arm l"></div><div class="s-arm r"></div>
-      <div class="s-leg l"></div><div class="s-leg r"></div>
-    </div>`;
-}
-
 export async function renderChamber(root: HTMLElement, onLogout: () => void) {
   root.innerHTML = `
     <header class="room-head">
       <p class="room-index">W-02</p>
       <h2 class="prompt" tabindex="-1">Hall</h2>
     </header>
-    <p class="lore">The day starts here. The warden, the scribe, and the scout keep their posts. Talk listens on this device. Cast asks your secretary.</p>
+    <p class="lore">Command deck over the live hologram. Talk listens on this device. Cast asks your sealed secretary.</p>
     <p class="msg" data-room-msg role="status"></p>
     <div class="world">
       <div class="stage" id="hallStage">
-        <div class="stage-wall" aria-hidden="true"></div>
-        <div class="stage-window" aria-hidden="true"></div>
-        <div class="stage-floor" aria-hidden="true"></div>
-        <div class="torch l" aria-hidden="true"></div>
-        <div class="torch r" aria-hidden="true"></div>
-        <p class="speech" id="npcLine">The warden says the seals hold.</p>
-        ${spriteHtml("guard")}
-        ${spriteHtml("clerk amber", "voiceJumper")}
-        ${spriteHtml("scout blood")}
+        <p class="speech" id="npcLine">Vault field stable · awaiting owner</p>
+        <div id="voiceJumper" class="hud-pulse" aria-hidden="true"></div>
       </div>
       <div class="side-panel">
         <section class="stat-box">
@@ -149,7 +133,8 @@ export async function renderChamber(root: HTMLElement, onLogout: () => void) {
       jumper.classList.remove("is-jumping");
       void jumper.offsetWidth;
       jumper.classList.add("is-jumping");
-      npcLine.textContent = "The scribe hears you.";
+      window.dispatchEvent(new CustomEvent("ragi:pulse"));
+      npcLine.textContent = "Field resonance · voice captured";
       window.setTimeout(() => jumper.classList.remove("is-jumping"), 280);
     },
   });
