@@ -1,98 +1,127 @@
 import { loginAccount, registerAccount, resetPassword } from "../api/auth";
 import { ApiError, pageCanReachApi } from "../api/client";
+import { getRememberMe, setRememberMe } from "../state/session";
 import { LocalAuthError } from "../vault/localAuth";
+
+const LOGO = `${import.meta.env.BASE_URL}logo.svg`;
 
 export function renderUnlock(root: HTMLElement, onUnlocked: () => void) {
   const server = pageCanReachApi();
+  const remember = getRememberMe();
+
   root.innerHTML = `
-    <div class="gate">
-      <div class="gate-hero">
-        <p class="gate-eyebrow">Private secretary · sealed vault</p>
-        <h2 class="gate-brand" tabindex="-1">RAGI</h2>
-        <p class="gate-line">Your work, money, time, and notes — behind a live hologram only you unlock.</p>
-        <div class="gate-signals" aria-hidden="true">
-          <span></span><span></span><span></span>
+    <div class="vault-stage">
+      <section class="vault-glass" aria-label="Vault login">
+        <div class="vault-brand">
+          <img class="vault-logo" src="${LOGO}" width="72" height="72" alt="RAGI logo" />
+          <h2 class="vault-wordmark" tabindex="-1">RAGI</h2>
+          <p class="vault-tag">Private secretary · sealed vault</p>
         </div>
-      </div>
 
-      <div class="gate-dock">
-        <header class="login-bar">
-          <div class="login-bar-copy">
-            <p class="login-bar-kicker">Access</p>
-            <h3 class="login-bar-title">Vault login</h3>
-          </div>
-          <p class="login-bar-seal" title="${
-            server ? "Durable server vault" : "Encrypted device vault"
-          }">
-            <span class="login-bar-dot" aria-hidden="true"></span>
-            <span>${server ? "Server seal" : "Device seal"}</span>
-          </p>
-        </header>
-
-        <div class="auth-rail" role="tablist" aria-label="Login mode">
-          <button type="button" id="tabEnter" class="auth-rail-tab" role="tab" aria-selected="true" aria-controls="enterPanel">
-            <span class="auth-rail-label">Sign in</span>
-          </button>
-          <button type="button" id="tabJoin" class="auth-rail-tab" role="tab" aria-selected="false" aria-controls="joinPanel">
-            <span class="auth-rail-label">Create account</span>
-          </button>
-          <button type="button" id="tabReset" class="auth-rail-tab" role="tab" aria-selected="false" aria-controls="resetPanel" hidden>
-            <span class="auth-rail-label">Recover</span>
-          </button>
-          <span class="auth-rail-glider" aria-hidden="true" data-pos="0"></span>
+        <div class="vault-secure-row" aria-hidden="true">
+          <span class="vault-chip"><i></i> Argon / PBKDF2 hash</span>
+          <span class="vault-chip"><i></i> ${server ? "Durable DB seal" : "Device vault seal"}</span>
         </div>
 
         <p class="msg" data-room-msg role="status"></p>
-        <p class="hint auth-mode">${
-          server
-            ? "Credentials seal into the durable vault. Each email can only be registered once."
-            : "Credentials seal into this device’s encrypted vault. Passwords are hashed — never stored plain. Each email can only be registered once."
-        }</p>
 
-        <form class="stack auth-form" id="enterPanel" aria-labelledby="tabEnter">
-          <label class="field"><span>Email</span><input id="loginEmail" name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254" placeholder="you@domain.com" /></label>
-          <label class="field"><span>Password</span><input id="loginPassword" name="password" type="password" autocomplete="current-password" required maxlength="128" placeholder="Your vault password" /></label>
-          <div class="form-actions auth-actions">
-            <button type="submit" class="primary">Open vault</button>
-            <button type="button" class="ghost" data-reveal="loginPassword" aria-pressed="false">Show</button>
-          </div>
-          <button type="button" class="auth-forgot" id="forgotLink">Forgot password?</button>
+        <form class="vault-form" id="enterPanel">
+          <label class="vault-field">
+            <span>Email</span>
+            <input id="loginEmail" name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254" placeholder="Email" />
+          </label>
+          <label class="vault-field">
+            <span>Password</span>
+            <div class="vault-pass">
+              <input id="loginPassword" name="password" type="password" autocomplete="current-password" required maxlength="128" placeholder="Password" />
+              <button type="button" class="vault-eye" data-reveal="loginPassword" aria-label="Show password" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+              </button>
+            </div>
+          </label>
+
+          <label class="vault-remember">
+            <input id="rememberMe" type="checkbox" ${remember ? "checked" : ""} />
+            <span class="vault-switch" aria-hidden="true"></span>
+            <span>Remember me on this device</span>
+          </label>
+
+          <button type="submit" class="vault-cta">Log in</button>
+          <button type="button" class="vault-link" id="forgotLink">Forgot your password?</button>
         </form>
 
-        <form class="stack auth-form" id="joinPanel" hidden aria-labelledby="tabJoin">
-          <label class="field"><span>Name</span><input id="joinHandle" name="handle" autocomplete="nickname" required minlength="2" maxlength="24" spellcheck="false" placeholder="your-name" /></label>
-          <p class="hint">Letters, numbers, and hyphens. Starts with a letter.</p>
-          <label class="field"><span>Email</span><input id="joinEmail" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="you@domain.com" /></label>
-          <label class="field"><span>Password</span><input id="joinPassword" name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="At least 12 characters" /></label>
-          <label class="field"><span>Confirm password</span><input id="joinPassword2" name="confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="Repeat password" /></label>
-          <p class="hint">You receive one recovery key after create — store it offline.</p>
-          <div class="form-actions auth-actions">
-            <button type="submit" class="primary">Create account</button>
-            <button type="button" class="ghost" data-reveal="joinPassword" aria-pressed="false">Show</button>
-          </div>
+        <form class="vault-form" id="joinPanel" hidden>
+          <label class="vault-field">
+            <span>Name</span>
+            <input id="joinHandle" name="handle" autocomplete="nickname" required minlength="2" maxlength="24" spellcheck="false" placeholder="your-name" />
+          </label>
+          <p class="vault-hint">Letters, numbers, hyphens. Starts with a letter. Unique forever.</p>
+          <label class="vault-field">
+            <span>Email</span>
+            <input id="joinEmail" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="Email" />
+          </label>
+          <label class="vault-field">
+            <span>Password</span>
+            <div class="vault-pass">
+              <input id="joinPassword" name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="At least 12 characters" />
+              <button type="button" class="vault-eye" data-reveal="joinPassword" aria-label="Show password" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+              </button>
+            </div>
+          </label>
+          <label class="vault-field">
+            <span>Confirm password</span>
+            <input id="joinPassword2" name="confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="Repeat password" />
+          </label>
+          <p class="vault-hint">One recovery key is shown once after create. Store it offline.</p>
+          <button type="submit" class="vault-cta">Create sealed account</button>
+          <button type="button" class="vault-link" id="backFromJoin">Back to log in</button>
         </form>
 
-        <form class="stack auth-form" id="resetPanel" hidden aria-labelledby="tabReset">
-          <label class="field"><span>Email</span><input id="resetEmail" name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254" placeholder="you@domain.com" /></label>
-          <label class="field"><span>Recovery key</span><input id="resetKey" name="recovery" autocomplete="off" required maxlength="64" spellcheck="false" placeholder="RAGI-XXXXXXXX-XXXXXXXX-XXXXXXXX" /></label>
-          <label class="field"><span>New password</span><input id="resetPassword" name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
-          <label class="field"><span>Confirm new password</span><input id="resetPassword2" name="confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
-          <div class="form-actions auth-actions">
-            <button type="submit" class="primary">Reset password</button>
-            <button type="button" class="ghost" id="backToSignIn">Back to sign in</button>
-          </div>
+        <form class="vault-form" id="resetPanel" hidden>
+          <label class="vault-field">
+            <span>Email</span>
+            <input id="resetEmail" name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254" placeholder="Email" />
+          </label>
+          <label class="vault-field">
+            <span>Recovery key</span>
+            <input id="resetKey" name="recovery" autocomplete="off" required maxlength="64" spellcheck="false" placeholder="RAGI-XXXXXXXX-XXXXXXXX-XXXXXXXX" />
+          </label>
+          <label class="vault-field">
+            <span>New password</span>
+            <input id="resetPassword" name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="New password" />
+          </label>
+          <label class="vault-field">
+            <span>Confirm new password</span>
+            <input id="resetPassword2" name="confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="Repeat new password" />
+          </label>
+          <button type="submit" class="vault-cta">Reset password</button>
+          <button type="button" class="vault-link" id="backToSignIn">Back to log in</button>
         </form>
 
         <div id="recoveryBox" class="recovery-box" hidden>
           <h3>Save your recovery key</h3>
-          <p>This key is shown once. Without it you cannot reset a forgotten password. Store it offline.</p>
+          <p>Shown once. Without it you cannot reset a forgotten password.</p>
           <code id="recoveryKey"></code>
           <div class="form-actions">
-            <button type="button" class="primary" id="recoveryDone">I saved it — enter vault</button>
-            <button type="button" class="ghost" id="recoveryCopy">Copy</button>
+            <button type="button" class="vault-cta" id="recoveryDone">I saved it — enter vault</button>
+            <button type="button" class="vault-ghost" id="recoveryCopy">Copy</button>
           </div>
         </div>
-      </div>
+
+        <div class="vault-footer" id="vaultFooter">
+          <div class="vault-rule" aria-hidden="true"></div>
+          <p class="vault-signup">
+            Don't have an account?
+            <button type="button" class="vault-link-inline" id="tabJoin">Sign up for RAGI</button>
+          </p>
+          <p class="vault-fine">${
+            server
+              ? "Passwords are hashed and sealed in the durable vault. Duplicate emails are refused."
+              : "Passwords are hashed in this browser vault. Duplicate emails are refused."
+          }</p>
+        </div>
+      </section>
     </div>
   `;
 
@@ -102,57 +131,29 @@ export function renderUnlock(root: HTMLElement, onUnlocked: () => void) {
   const resetPanel = root.querySelector<HTMLFormElement>("#resetPanel")!;
   const recoveryBox = root.querySelector<HTMLElement>("#recoveryBox")!;
   const recoveryKeyEl = root.querySelector<HTMLElement>("#recoveryKey")!;
-  const tabEnter = root.querySelector<HTMLButtonElement>("#tabEnter")!;
-  const tabJoin = root.querySelector<HTMLButtonElement>("#tabJoin")!;
-  const tabReset = root.querySelector<HTMLButtonElement>("#tabReset")!;
-  const glider = root.querySelector<HTMLElement>(".auth-rail-glider")!;
-  const rail = root.querySelector<HTMLElement>(".auth-rail")!;
+  const footer = root.querySelector<HTMLElement>("#vaultFooter")!;
+  const rememberEl = root.querySelector<HTMLInputElement>("#rememberMe")!;
   let pendingUnlock: (() => void) | null = null;
-
-  function setGlider(pos: 0 | 1 | 2) {
-    glider.dataset.pos = String(pos);
-    const tabs = [tabEnter, tabJoin, tabReset].filter((t) => !t.hidden);
-    const active = tabs[Math.min(pos, tabs.length - 1)];
-    if (!active) return;
-    const railRect = rail.getBoundingClientRect();
-    const tabRect = active.getBoundingClientRect();
-    glider.style.width = `${tabRect.width}px`;
-    glider.style.transform = `translateX(${tabRect.left - railRect.left}px)`;
-  }
 
   function show(which: "enter" | "join" | "reset") {
     enterPanel.hidden = which !== "enter";
     joinPanel.hidden = which !== "join";
     resetPanel.hidden = which !== "reset";
     recoveryBox.hidden = true;
-    rail.hidden = false;
-    const recover = which === "reset";
-    tabReset.hidden = !recover;
-    rail.classList.toggle("is-recover", recover);
-    tabEnter.setAttribute("aria-selected", String(which === "enter"));
-    tabJoin.setAttribute("aria-selected", String(which === "join"));
-    tabReset.setAttribute("aria-selected", String(recover));
+    footer.hidden = which === "reset";
     msg.textContent = "";
     msg.className = "msg";
-    requestAnimationFrame(() => setGlider(which === "enter" ? 0 : which === "join" ? 1 : 2));
     const focusId =
       which === "join" ? "#joinHandle" : which === "reset" ? "#resetEmail" : "#loginEmail";
     root.querySelector<HTMLInputElement>(focusId)?.focus();
   }
 
-  tabEnter.addEventListener("click", () => show("enter"));
-  tabJoin.addEventListener("click", () => show("join"));
-  tabReset.addEventListener("click", () => show("reset"));
+  root.querySelector("#tabJoin")?.addEventListener("click", () => show("join"));
   root.querySelector("#forgotLink")?.addEventListener("click", () => show("reset"));
   root.querySelector("#backToSignIn")?.addEventListener("click", () => show("enter"));
+  root.querySelector("#backFromJoin")?.addEventListener("click", () => show("enter"));
 
-  requestAnimationFrame(() => setGlider(0));
-  window.addEventListener("resize", () => {
-    const selected = root.querySelector('.auth-rail-tab[aria-selected="true"]');
-    if (selected === tabEnter) setGlider(0);
-    else if (selected === tabJoin) setGlider(1);
-    else setGlider(2);
-  });
+  rememberEl.addEventListener("change", () => setRememberMe(rememberEl.checked));
 
   root.querySelectorAll<HTMLButtonElement>("[data-reveal]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -160,8 +161,8 @@ export function renderUnlock(root: HTMLElement, onUnlocked: () => void) {
       if (!input) return;
       const showText = input.type === "password";
       input.type = showText ? "text" : "password";
-      button.textContent = showText ? "Hide" : "Show";
       button.setAttribute("aria-pressed", String(showText));
+      button.setAttribute("aria-label", showText ? "Hide password" : "Show password");
     });
   });
 
@@ -179,8 +180,8 @@ export function renderUnlock(root: HTMLElement, onUnlocked: () => void) {
       enterPanel.hidden = true;
       joinPanel.hidden = true;
       resetPanel.hidden = true;
+      footer.hidden = true;
       recoveryBox.hidden = false;
-      rail.hidden = true;
       pendingUnlock = onUnlocked;
       msg.textContent = "Account sealed. Save the recovery key before you continue.";
       msg.className = "msg good";
@@ -208,6 +209,7 @@ export function renderUnlock(root: HTMLElement, onUnlocked: () => void) {
 
   enterPanel.addEventListener("submit", (event) => {
     event.preventDefault();
+    setRememberMe(rememberEl.checked);
     const email = (root.querySelector<HTMLInputElement>("#loginEmail")!.value || "").trim();
     const password = root.querySelector<HTMLInputElement>("#loginPassword")!.value;
     const btn = enterPanel.querySelector<HTMLButtonElement>('button[type="submit"]')!;
@@ -224,6 +226,7 @@ export function renderUnlock(root: HTMLElement, onUnlocked: () => void) {
 
   joinPanel.addEventListener("submit", (event) => {
     event.preventDefault();
+    setRememberMe(true);
     const handle = (root.querySelector<HTMLInputElement>("#joinHandle")!.value || "").trim();
     const email = (root.querySelector<HTMLInputElement>("#joinEmail")!.value || "").trim();
     const password = root.querySelector<HTMLInputElement>("#joinPassword")!.value;

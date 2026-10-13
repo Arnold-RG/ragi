@@ -1,6 +1,7 @@
 const TOKEN_KEY = "ragi.session.token";
 const EXP_KEY = "ragi.session.expires";
 const META_KEY = "ragi.session.meta";
+const REMEMBER_KEY = "ragi.session.remember";
 
 let memoryToken: string | null = null;
 
@@ -10,53 +11,94 @@ export type SessionMeta = {
   mode?: "local" | "server";
 };
 
-function storage(): Storage {
+function preferRemember(): boolean {
   try {
-    return localStorage;
+    return localStorage.getItem(REMEMBER_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export function setRememberMe(on: boolean) {
+  try {
+    localStorage.setItem(REMEMBER_KEY, on ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getRememberMe(): boolean {
+  return preferRemember();
+}
+
+function durableStore(): Storage {
+  try {
+    return preferRemember() ? localStorage : sessionStorage;
   } catch {
     return sessionStorage;
   }
 }
 
+function clearBoth() {
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      store.removeItem(TOKEN_KEY);
+      store.removeItem(EXP_KEY);
+      store.removeItem(META_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export function setToken(token: string | null, expiresAt?: string | null, meta?: SessionMeta | null) {
   memoryToken = token;
-  const store = storage();
-  if (token) {
-    store.setItem(TOKEN_KEY, token);
-    if (expiresAt) store.setItem(EXP_KEY, expiresAt);
-    else store.removeItem(EXP_KEY);
-    if (meta) store.setItem(META_KEY, JSON.stringify(meta));
-  } else {
-    store.removeItem(TOKEN_KEY);
-    store.removeItem(EXP_KEY);
-    store.removeItem(META_KEY);
-  }
+  clearBoth();
+  if (!token) return;
+  const store = durableStore();
+  store.setItem(TOKEN_KEY, token);
+  if (expiresAt) store.setItem(EXP_KEY, expiresAt);
+  if (meta) store.setItem(META_KEY, JSON.stringify(meta));
 }
 
 export function getToken(): string | null {
   if (memoryToken) return memoryToken;
-  const store = storage();
-  const token = store.getItem(TOKEN_KEY);
-  const exp = store.getItem(EXP_KEY);
-  if (exp && new Date(exp).getTime() < Date.now()) {
-    clearSession();
-    return null;
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      const token = store.getItem(TOKEN_KEY);
+      const exp = store.getItem(EXP_KEY);
+      if (exp && new Date(exp).getTime() < Date.now()) {
+        store.removeItem(TOKEN_KEY);
+        store.removeItem(EXP_KEY);
+        store.removeItem(META_KEY);
+        continue;
+      }
+      if (token) {
+        memoryToken = token;
+        return memoryToken;
+      }
+    } catch {
+      /* ignore */
+    }
   }
-  memoryToken = token;
-  return memoryToken;
+  return null;
 }
 
 export function getSessionMeta(): SessionMeta | null {
-  try {
-    const raw = storage().getItem(META_KEY);
-    return raw ? (JSON.parse(raw) as SessionMeta) : null;
-  } catch {
-    return null;
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      const raw = store.getItem(META_KEY);
+      if (raw) return JSON.parse(raw) as SessionMeta;
+    } catch {
+      /* ignore */
+    }
   }
+  return null;
 }
 
 export function clearSession() {
-  setToken(null);
+  memoryToken = null;
+  clearBoth();
 }
 
 export function isUnlocked(): boolean {
