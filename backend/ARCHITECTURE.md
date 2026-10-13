@@ -31,7 +31,7 @@ src/
   modules/
     health/              # /health /ready
     system/              # architecture + owner status
-    auth/                # triple gates, sessions, webauthn
+    auth/                # accounts, sessions, legacy triple seal, webauthn
     secretary/           # mode, briefing, jobs, focus, notes, export
       routes.ts          # thin HTTP
       service.ts         # business logic

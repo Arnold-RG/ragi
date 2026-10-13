@@ -13,6 +13,7 @@ import {
   saveLoginChallenge,
 } from "./lib/challenges.js";
 import { createSession, readSession, revokeSession, type GateId } from "./lib/session.js";
+import { isLocked, loginAccount, loginSchema, registerAccount, registerSchema } from "./accounts.js";
 import { env } from "../../shared/config.js";
 import {
   authenticationOptions,
@@ -30,7 +31,57 @@ function clientMeta(req: { ip: string; headers: Record<string, unknown> }) {
   };
 }
 
+const authLimit = {
+  config: { rateLimit: { max: 8, timeWindow: 60_000 } },
+};
+
+function setSessionCookie(reply: import("fastify").FastifyReply, token: string) {
+  reply.setCookie(env.RAGI_COOKIE_NAME, token, {
+    path: "/",
+    httpOnly: true,
+    sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    secure: env.NODE_ENV === "production",
+    maxAge: env.SESSION_TTL_SECONDS,
+  });
+}
+
 export const authRoutes: FastifyPluginAsync = async (app) => {
+  app.post("/api/v1/auth/register", authLimit, async (req, reply) => {
+    const meta = clientMeta(req);
+    if (await isLocked(`ip:${meta.ip}`)) {
+      return reply.code(429).send({
+        error: "locked_out",
+        message: "Too many attempts. Wait a while and try again.",
+      });
+    }
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "validation_failed",
+        message: parsed.error.issues[0]?.message ?? "Check the form and try again.",
+      });
+    }
+    const result = await registerAccount({ ...parsed.data, ...meta });
+    if (!result.ok) return reply.code(result.status).send({ error: result.error, message: result.message });
+    setSessionCookie(reply, result.token);
+    return { ok: true, token: result.token, expiresAt: result.expiresAt, handle: result.handle };
+  });
+
+  app.post("/api/v1/auth/login", authLimit, async (req, reply) => {
+    const meta = clientMeta(req);
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "validation_failed",
+        message: parsed.error.issues[0]?.message ?? "Check the form and try again.",
+      });
+    }
+    const result = await loginAccount({ ...parsed.data, ...meta });
+    if (!result.ok) return reply.code(result.status).send({ error: result.error, message: result.message });
+    setSessionCookie(reply, result.token);
+    return { ok: true, token: result.token, expiresAt: result.expiresAt, handle: result.handle };
+  });
+
   app.post("/api/v1/auth/challenge", async (req, reply) => {
     const meta = clientMeta(req);
     const lockedCount = Number((await cacheGet(`authfail:${meta.ip}`)) ?? "0");
@@ -57,7 +108,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const owner = await db.owner.findUnique({ where: { handle: "owner" } });
     if (!owner) return reply.code(503).send({ error: "owner_not_seeded" });
 
-    const ok = await verifySecret(owner.passphraseHash, body.passphrase);
+    const ok = Boolean(owner.passphraseHash) && (await verifySecret(owner.passphraseHash!, body.passphrase));
     if (!ok) {
       await audit({ ownerId: owner.id, action: "auth.gate1", outcome: "deny", vaultSalt: owner.vaultSalt, ...meta });
       return reply.code(401).send({ error: "gate1_denied" });
@@ -85,7 +136,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const owner = await db.owner.findUnique({ where: { handle: "owner" } });
     if (!owner) return reply.code(503).send({ error: "owner_not_seeded" });
 
-    let ok = await verifySecret(owner.backupCodeHash, body.code);
+    let ok = Boolean(owner.backupCodeHash) && (await verifySecret(owner.backupCodeHash!, body.code));
     if (!ok && owner.totpSecretEnc && owner.totpVerified) {
       const secret = decryptString(owner.totpSecretEnc, owner.vaultSalt);
       ok = authenticator.check(body.code, secret);
@@ -122,7 +173,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     let ok = false;
     if (body.deviceKey) {
-      ok = await verifySecret(owner.deviceKeyHash, body.deviceKey);
+      ok = Boolean(owner.deviceKeyHash) && (await verifySecret(owner.deviceKeyHash!, body.deviceKey));
     } else if (body.webauthnResponse) {
       const expected = await cacheGet(`webauthn:auth:${body.challengeId}`);
       if (!expected) return reply.code(400).send({ error: "missing_webauthn_challenge" });
@@ -197,6 +248,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const mode = await db.modeState.findUnique({ where: { ownerId: owner.id } });
     return {
       handle: owner.handle,
+      email: owner.email,
+      githubLogin: owner.githubLogin,
       webauthnEnabled: owner.webauthnEnabled,
       totpVerified: owner.totpVerified,
       mode: mode?.mode ?? "work",

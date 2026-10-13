@@ -1,120 +1,119 @@
-import { gate1, gate2, gate3, startChallenge } from "../api/auth";
-import { ApiError } from "../api/client";
+import { loginAccount, registerAccount } from "../api/auth";
+import { ApiError, pageCanReachApi } from "../api/client";
 import { setToken } from "../state/session";
 
 export function renderUnlock(root: HTMLElement, onUnlocked: () => void) {
   root.innerHTML = `
-    <p class="prompt">&gt; ENTER TRIPLE SEAL <span class="blink">_</span></p>
+    <header class="room-head">
+      <p class="room-index">N-14</p>
+      <h2 class="prompt" tabindex="-1">Vault</h2>
+    </header>
     <p class="lore">
-      Owner vault. Three permissions bind the secretary. Live wardens wait in the hall.
-      Wrong order dies. Wrong door is the void.
+      RAGI keeps a private record of work, money, time, and notes.
+      Create an account with your email. The password is stored only as an Argon2id hash.
+      What you write is encrypted for your account and is not readable by anyone else.
     </p>
-    <div class="gate-map">
-      <div class="mini-map" id="miniMap" aria-hidden="true"></div>
-      <div class="gate-list">
-        <div class="gate-row is-active" data-step="1">
-          <code>SIGIL</code>
-          <input id="gate1" type="password" autocomplete="off" spellcheck="false" placeholder="passphrase rune" />
-          <button type="button" data-check="1">SET</button>
-        </div>
-        <div class="gate-row" data-step="2">
-          <code>HEX</code>
-          <input id="gate2" type="text" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="owner code / totp" />
-          <button type="button" data-check="2">SET</button>
-        </div>
-        <div class="gate-row" data-step="3">
-          <code>RELIC</code>
-          <input id="gate3" type="password" autocomplete="off" spellcheck="false" placeholder="device relic" />
-          <button type="button" data-check="3">SET</button>
-        </div>
-        <p class="msg" id="lockMsg"></p>
-      </div>
+    <div class="auth-switch" role="tablist" aria-label="Account">
+      <button type="button" id="tabEnter" role="tab" aria-selected="true" aria-controls="enterPanel">Sign in</button>
+      <button type="button" id="tabJoin" role="tab" aria-selected="false" aria-controls="joinPanel">Create account</button>
     </div>
-    <p class="hint">SEALS HIT THE LIVE BACKEND · DIGESTS NEVER TRAVEL IN THE CLEAR FROM THE SERVER STORE</p>
+    <p class="msg" data-room-msg role="status"></p>
+    <form class="stack auth-form" id="enterPanel" aria-labelledby="tabEnter">
+      <label class="field"><span>Email</span><input id="loginEmail" name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254" /></label>
+      <label class="field"><span>Password</span><input id="loginPassword" name="password" type="password" autocomplete="current-password" required maxlength="128" /></label>
+      <div class="form-actions">
+        <button type="submit" class="primary">Enter</button>
+        <button type="button" class="ghost" data-reveal="loginPassword" aria-pressed="false">Show password</button>
+      </div>
+    </form>
+    <form class="stack auth-form" id="joinPanel" hidden aria-labelledby="tabJoin">
+      <label class="field"><span>Name</span><input id="joinHandle" name="handle" autocomplete="nickname" required minlength="2" maxlength="24" spellcheck="false" /></label>
+      <p class="hint">Letters, numbers, and hyphens. This is how the house addresses you.</p>
+      <label class="field"><span>Email</span><input id="joinEmail" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254" /></label>
+      <label class="field"><span>Password</span><input id="joinPassword" name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
+      <label class="field"><span>Confirm password</span><input id="joinPassword2" name="confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
+      <p class="hint">At least 12 characters. A long passphrase is better than a clever short one.</p>
+      <div class="form-actions">
+        <button type="submit" class="primary">Create account</button>
+        <button type="button" class="ghost" data-reveal="joinPassword" aria-pressed="false">Show password</button>
+      </div>
+    </form>
   `;
 
-  const map = root.querySelector("#miniMap") as HTMLElement;
-  for (let i = 0; i < 28; i++) {
-    const c = document.createElement("div");
-    c.className = "cell";
-    c.style.left = `${8 + (i % 7) * 16}px`;
-    c.style.top = `${12 + Math.floor(i / 7) * 22}px`;
-    if (i === 3 || i === 10 || i === 17 || i === 24) c.style.background = "#000";
-    map.appendChild(c);
-  }
-  const you = document.createElement("div");
-  you.className = "you";
-  you.style.left = "40px";
-  you.style.top = "56px";
-  map.appendChild(you);
-
-  let challengeId = "";
-  let step = 1;
-  const msg = root.querySelector("#lockMsg") as HTMLElement;
-
-  function setStep(n: number) {
-    step = n;
-    root.querySelectorAll(".gate-row").forEach((el) => {
-      const s = Number((el as HTMLElement).dataset.step);
-      el.classList.toggle("is-active", s === n);
-      el.classList.toggle("is-cleared", s < n);
+  const msg = root.querySelector<HTMLElement>("[data-room-msg]")!;
+  if (!pageCanReachApi()) {
+    msg.textContent = "This public page is not pointed at an account server yet. The house is here. Sign-up starts when the API origin is set for the build.";
+    msg.className = "msg";
+    root.querySelectorAll("form button[type=submit]").forEach((button) => {
+      (button as HTMLButtonElement).disabled = true;
     });
-    you.style.left = `${24 + (n - 1) * 28}px`;
+  }
+  const enterPanel = root.querySelector<HTMLFormElement>("#enterPanel")!;
+  const joinPanel = root.querySelector<HTMLFormElement>("#joinPanel")!;
+  const tabEnter = root.querySelector<HTMLButtonElement>("#tabEnter")!;
+  const tabJoin = root.querySelector<HTMLButtonElement>("#tabJoin")!;
+
+  function show(which: "enter" | "join") {
+    const join = which === "join";
+    enterPanel.hidden = join;
+    joinPanel.hidden = !join;
+    tabEnter.setAttribute("aria-selected", String(!join));
+    tabJoin.setAttribute("aria-selected", String(join));
+    msg.textContent = "";
+    (join ? root.querySelector<HTMLInputElement>("#joinHandle") : root.querySelector<HTMLInputElement>("#loginEmail"))?.focus();
   }
 
-  async function ensureChallenge() {
-    if (challengeId) return;
-    const c = await startChallenge();
-    challengeId = c.challengeId;
-  }
+  tabEnter.addEventListener("click", () => show("enter"));
+  tabJoin.addEventListener("click", () => show("join"));
 
-  root.querySelectorAll<HTMLButtonElement>("[data-check]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const n = Number(btn.dataset.check);
-      if (n !== step) {
-        msg.textContent = "WRONG ORDER // OLD RULES";
-        msg.className = "msg bad";
-        return;
-      }
-      const input = root.querySelector(`#gate${n}`) as HTMLInputElement;
-      msg.textContent = "SEALING…";
-      msg.className = "msg";
-      try {
-        await ensureChallenge();
-        if (n === 1) await gate1(challengeId, input.value.trim());
-        if (n === 2) await gate2(challengeId, input.value.trim());
-        if (n === 3) {
-          const session = await gate3(challengeId, input.value.trim());
-          setToken(session.token);
-        }
-        msg.textContent = `SEAL ${n} ACCEPTED`;
-        msg.className = "msg good";
-        input.disabled = true;
-        btn.disabled = true;
-        if (n < 3) {
-          setStep(n + 1);
-          (root.querySelector(`#gate${n + 1}`) as HTMLInputElement).focus();
-        } else {
-          root.querySelectorAll(".gate-row").forEach((el) => {
-            el.classList.add("is-cleared");
-            el.classList.remove("is-active");
-          });
-          onUnlocked();
-        }
-      } catch (err) {
-        const label = err instanceof ApiError ? err.message : "seal_failed";
-        msg.textContent = `SEAL REJECTED :: ${label}`;
-        msg.className = "msg bad";
-      }
+  root.querySelectorAll<HTMLButtonElement>("[data-reveal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = root.querySelector<HTMLInputElement>(`#${button.dataset.reveal}`);
+      if (!input) return;
+      const showText = input.type === "password";
+      input.type = showText ? "text" : "password";
+      button.textContent = showText ? "Hide password" : "Show password";
+      button.setAttribute("aria-pressed", String(showText));
     });
   });
 
-  ["gate1", "gate2", "gate3"].forEach((id) => {
-    root.querySelector(`#${id}`)?.addEventListener("keydown", (e) => {
-      if ((e as KeyboardEvent).key === "Enter") {
-        const n = Number(id.replace("gate", ""));
-        root.querySelector<HTMLButtonElement>(`[data-check="${n}"]`)?.click();
-      }
-    });
+  function fail(err: unknown) {
+    msg.textContent = err instanceof ApiError ? err.message : "The vault could not open.";
+    msg.className = "msg bad";
+  }
+
+  enterPanel.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const email = (root.querySelector<HTMLInputElement>("#loginEmail")!.value || "").trim();
+    const password = root.querySelector<HTMLInputElement>("#loginPassword")!.value;
+    msg.textContent = "Checking the seal…";
+    msg.className = "msg";
+    void loginAccount({ email, password })
+      .then((session) => {
+        setToken(session.token);
+        onUnlocked();
+      })
+      .catch(fail);
+  });
+
+  joinPanel.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const handle = (root.querySelector<HTMLInputElement>("#joinHandle")!.value || "").trim();
+    const email = (root.querySelector<HTMLInputElement>("#joinEmail")!.value || "").trim();
+    const password = root.querySelector<HTMLInputElement>("#joinPassword")!.value;
+    const confirm = root.querySelector<HTMLInputElement>("#joinPassword2")!.value;
+    if (password !== confirm) {
+      msg.textContent = "The two passwords do not match.";
+      msg.className = "msg bad";
+      return;
+    }
+    msg.textContent = "Cutting a key…";
+    msg.className = "msg";
+    void registerAccount({ email, handle, password })
+      .then((session) => {
+        setToken(session.token);
+        onUnlocked();
+      })
+      .catch(fail);
   });
 }

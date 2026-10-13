@@ -1,13 +1,13 @@
-import { copyFileSync, existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { db } from "../db.js";
 import { logger } from "../logger.js";
-import { backupsRoot, sqliteDbPath, storageReady } from "./paths.js";
+import { backupsRoot, storageReady } from "./paths.js";
 import { exportVault } from "./export-vault.js";
 
 export type SnapshotMeta = {
   id: string;
   createdAt: string;
+  ownerId: string;
   jsonPath: string;
   dbPath: string | null;
   bytes: number;
@@ -20,16 +20,7 @@ function stamp() {
   return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}-${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}`;
 }
 
-async function checkpointSqlite() {
-  if (!sqliteDbPath()) return;
-  try {
-    await db.$executeRawUnsafe("PRAGMA wal_checkpoint(FULL)");
-  } catch {
-    /* ignore — postgres or locked */
-  }
-}
-
-/** Write durable snapshot: JSON vault memory + SQLite file copy when local. */
+/** Write one account's vault as append-only JSON. Never a full database image. */
 export async function createSnapshot(ownerId: string, reason = "manual"): Promise<SnapshotMeta> {
   const id = `snap-${stamp()}`;
   const dir = backupsRoot();
@@ -38,20 +29,14 @@ export async function createSnapshot(ownerId: string, reason = "manual"): Promis
   const body = JSON.stringify({ ...payload, snapshotId: id, reason }, null, 2);
   writeFileSync(jsonPath, body, "utf8");
 
-  let dbCopy: string | null = null;
-  const src = sqliteDbPath();
-  if (src && existsSync(src)) {
-    await checkpointSqlite();
-    dbCopy = join(dir, `${id}.db`);
-    copyFileSync(src, dbCopy);
-  }
-
+  // JSON only. A full database copy would mix every member's rows into one file.
   const meta: SnapshotMeta = {
     id,
     createdAt: new Date().toISOString(),
+    ownerId,
     jsonPath,
-    dbPath: dbCopy,
-    bytes: Buffer.byteLength(body) + (dbCopy && existsSync(dbCopy) ? statSync(dbCopy).size : 0),
+    dbPath: null,
+    bytes: Buffer.byteLength(body),
     counts: payload.counts,
   };
 
@@ -60,13 +45,16 @@ export async function createSnapshot(ownerId: string, reason = "manual"): Promis
   return meta;
 }
 
-export function listSnapshots(): SnapshotMeta[] {
+export function listSnapshots(ownerId?: string): SnapshotMeta[] {
   const dir = backupsRoot();
   const files = readdirSync(dir).filter((f) => f.endsWith(".meta.json"));
   const out: SnapshotMeta[] = [];
   for (const f of files) {
     try {
-      out.push(JSON.parse(readFileSync(join(dir, f), "utf8")) as SnapshotMeta);
+      const snap = JSON.parse(readFileSync(join(dir, f), "utf8")) as SnapshotMeta;
+      if (ownerId && snap.ownerId !== ownerId) continue;
+      if (ownerId && !snap.ownerId) continue;
+      out.push(snap);
     } catch {
       /* skip corrupt */
     }
@@ -74,16 +62,18 @@ export function listSnapshots(): SnapshotMeta[] {
   return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function loadSnapshotJson(id: string): unknown {
+export function loadSnapshotJson(id: string, ownerId?: string): unknown {
   const safe = id.replace(/[^a-zA-Z0-9_-]/g, "");
   const path = join(backupsRoot(), `${safe}.json`);
   if (!existsSync(path)) throw new Error("snapshot_not_found");
-  return JSON.parse(readFileSync(path, "utf8"));
+  const data = JSON.parse(readFileSync(path, "utf8")) as { ownerId?: string };
+  if (ownerId && data.ownerId !== ownerId) throw new Error("snapshot_not_found");
+  return data;
 }
 
-export function storageStatus() {
+export function storageStatus(ownerId?: string) {
   const ready = storageReady();
-  const snaps = listSnapshots();
+  const snaps = listSnapshots(ownerId);
   return {
     ...ready,
     snapshotCount: snaps.length,

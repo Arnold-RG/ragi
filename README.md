@@ -1,10 +1,12 @@
 # RAGI
 
-Owner-only private secretary. **Public code. Private locks and secrets.**
+A private secretary. **Public house. Private vaults.**
 
-Dark-age CRT chamber in the browser, Fastify vault on the wire. Three gates before anything opens.
+Anyone may create an account. Notes, money, projects, and snapshots stay on that account, encrypted, and are not readable by anyone else. The owner's account is an account like any other: no shared back door.
 
-- **Web (CRT UI):** [`web/`](./web/) — Vite + TypeScript · Pages at `/ragi/`
+Live chamber: https://arnold-rg.github.io/ragi/
+
+- **Web:** [`web/`](./web/) — Vite + TypeScript · Pages at `/ragi/`
 - **Rooms:** Vault · Hall · **Home** · Forge · Gold · Clock · **Hub (GitHub %)** · Map · Den
 - **Backend:** [`backend/`](./backend/) — see [`backend/ARCHITECTURE.md`](./backend/ARCHITECTURE.md)
 - **Stack:** [`docker-compose.yml`](./docker-compose.yml) — Postgres · Redis · API · optional nginx web
@@ -31,11 +33,11 @@ CAST uses Gemini when `GEMINI_API_KEY` is set; otherwise the **local vault secre
 
 ## Security model
 
-1. Passphrase (Argon2id)
-2. TOTP **or** immutable owner backup code
-3. Device key **or** WebAuthn passkey
+Accounts sign in with email and a password of at least 12 characters. Passwords are hashed with Argon2id and are never stored or logged in the clear. A legacy triple seal (passphrase, authenticator or backup code, device key or passkey) still opens the original seeded account if you run `npm run seed`.
 
-Sessions are JWT + server-side session rows. Vault fields use AES-256-GCM. Audit log records every auth and AI call. Rate limits and lockouts apply.
+Sessions are a signed JWT plus a server-side session row that can be revoked. The browser keeps the token in `sessionStorage` for this tab. Vault fields use AES-256-GCM with a salt that belongs to that account. Queries are scoped by account id. Snapshots are per account and are never a copy of the whole database. Auth routes are rate limited, and repeated failures lock the address and the email for a while. Audit log records sign-in and AI calls.
+
+The Pages site is the house. It does not contain anyone's vault. Set `VITE_API_ORIGIN` to your API host before the Pages build if visitors should be able to sign up there. Until that variable is set, the public page still opens and will say the vault link is down.
 
 ## Local full stack (Windows)
 
@@ -60,7 +62,21 @@ npm run dev
 - Chamber: http://127.0.0.1:4173/  
 - Docker all-in-one web: http://127.0.0.1:8080/ (after `docker compose up --build`)
 
-CORS allows local Vite (`4173`) and `https://arnold-rg.github.io`. Set repo variable `VITE_API_ORIGIN` for Pages builds that should hit your public API host.
+Create an account in the vault. You do not need the seed script for a normal account. `npm run seed` is only for the legacy triple-seal owner, and it refuses to overwrite an existing one.
+
+CORS allows local Vite (`4173`) and `https://arnold-rg.github.io`.
+
+## Publish
+
+The chamber is deployed from [`.github/workflows/pages.yml`](./.github/workflows/pages.yml) to GitHub Pages on every push to `main` that touches `web/`.
+
+1. In the repository, open **Settings → Pages → Build and deployment** and choose **GitHub Actions**. The workflow also asks to enable Pages itself. If the run still reports that Pages is missing, that settings switch is the one that has to be flipped by hand.
+2. Host the API somewhere reachable over HTTPS (the Docker stack, or any Node host). Generate `RAGI_MASTER_KEY` and `RAGI_SESSION_SECRET` on that host. Do not commit them.
+3. Set `RAGI_WEB_ORIGIN` so it includes `https://arnold-rg.github.io`.
+4. In the repository, add a variable `VITE_API_ORIGIN` with the public API origin, for example `https://api.example.com`. Re-run the Pages workflow. Vite bakes that origin into the static build.
+5. The live URL is https://arnold-rg.github.io/ragi/
+
+`robots.txt` and `sitemap.xml` ship with the Pages build under `/ragi/`. GitHub serves a project site on that path, not at the domain root.
 
 ## 32GB host
 

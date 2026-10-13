@@ -19,6 +19,7 @@
     "seed": "tsx src/scripts/seed-owner.ts",
     "reseed": "tsx src/scripts/reseed.ts && tsx src/scripts/seed-owner.ts",
     "smoke:auth": "tsx src/scripts/smoke-auth.ts",
+    "smoke:accounts": "tsx src/scripts/smoke-accounts.ts",
     "health": "tsx src/scripts/healthcheck.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

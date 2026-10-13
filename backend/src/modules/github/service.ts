@@ -1,4 +1,3 @@
-import { env } from "../../shared/config.js";
 import { db } from "../../shared/db.js";
 import { withOwnerVault } from "../../shared/vault.js";
 import { touchVault } from "../../shared/storage/persist.js";
@@ -55,8 +54,6 @@ async function fetchGithubRepos(login: string): Promise<GhRepo[]> {
     "user-agent": "RAGI-secretary",
     "x-github-api-version": "2022-11-28",
   };
-  if (env.GITHUB_TOKEN) headers.authorization = `Bearer ${env.GITHUB_TOKEN}`;
-
   const out: GhRepo[] = [];
   let page = 1;
   while (page <= 10) {
@@ -75,7 +72,20 @@ async function fetchGithubRepos(login: string): Promise<GhRepo[]> {
 }
 
 export async function listGithubProjects(ownerId: string) {
-  const login = env.GITHUB_USERNAME || "Arnold-RG";
+  const owner = await db.owner.findUnique({ where: { id: ownerId } });
+  const login = owner?.githubLogin?.trim() ?? "";
+  if (!login) {
+    return {
+      login: "",
+      fetchedAt: new Date().toISOString(),
+      authenticated: false,
+      needsLogin: true,
+      count: 0,
+      avgProgress: 0,
+      avgRemaining: 100,
+      projects: [],
+    };
+  }
   const repos = await fetchGithubRepos(login);
   const tracks = await db.githubRepoTrack.findMany({ where: { ownerId } });
   const trackMap = new Map(tracks.map((t) => [t.fullName, t]));
@@ -114,12 +124,22 @@ export async function listGithubProjects(ownerId: string) {
   return {
     login,
     fetchedAt: new Date().toISOString(),
-    authenticated: Boolean(env.GITHUB_TOKEN),
+    authenticated: false,
+    needsLogin: false,
     count: projects.length,
     avgProgress: avg,
     avgRemaining: Math.max(0, 100 - avg),
     projects,
   };
+}
+
+export async function setGithubLogin(ownerId: string, login: string) {
+  const cleaned = login.trim();
+  await db.owner.update({
+    where: { id: ownerId },
+    data: { githubLogin: cleaned || null },
+  });
+  return { login: cleaned };
 }
 
 export async function setGithubProgress(

@@ -43,6 +43,14 @@ export function listFocus() {
   }>("/api/v1/focus");
 }
 
+export function completeFocus(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/focus/${id}/complete`, { method: "POST" });
+}
+
+export function deleteJob(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/jobs/${id}`, { method: "DELETE" });
+}
+
 export function createFocus(input: { label: string; startsAt: string; endsAt: string }) {
   return api<{ id: string }>("/api/v1/focus", {
     method: "POST",
