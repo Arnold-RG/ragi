@@ -1,4 +1,11 @@
 import { api } from "./client";
+import { getToken } from "../state/session";
+import { isLocalToken } from "../vault/localAuth";
+import {
+  localListGithubRepos,
+  localSetGithubLogin,
+  localSetGithubProgress,
+} from "../vault/localLife";
 
 export type GhProject = {
   name: string;
@@ -16,6 +23,7 @@ export type GhProject = {
 };
 
 export function listGithubRepos() {
+  if (isLocalToken(getToken())) return localListGithubRepos();
   return api<{
     login: string;
     fetchedAt: string;
@@ -29,6 +37,7 @@ export function listGithubRepos() {
 }
 
 export function setGithubLogin(login: string) {
+  if (isLocalToken(getToken())) return localSetGithubLogin(login);
   return api<{ login: string }>("/api/v1/github/login", {
     method: "PUT",
     body: JSON.stringify({ login }),
@@ -36,6 +45,7 @@ export function setGithubLogin(login: string) {
 }
 
 export function setGithubProgress(fullName: string, progress: number) {
+  if (isLocalToken(getToken())) return localSetGithubProgress(fullName, progress);
   return api<{ fullName: string; progress: number; remaining: number }>(
     "/api/v1/github/progress",
     {

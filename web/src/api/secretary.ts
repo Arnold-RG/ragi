@@ -1,4 +1,7 @@
 import { api } from "./client";
+import { getToken } from "../state/session";
+import { isLocalToken } from "../vault/localAuth";
+import { localCreateNote, localListNotes } from "../vault/localLife";
 
 export function getMode() {
   return api<{ mode: string }>("/api/v1/mode");
@@ -66,12 +69,14 @@ export function chatAi(message: string, mode?: "work" | "personal") {
 }
 
 export function listNotes() {
+  if (isLocalToken(getToken())) return localListNotes();
   return api<{
     notes: Array<{ id: string; kind: string; title: string; body: string; updatedAt: string }>;
   }>("/api/v1/notes");
 }
 
 export function createNote(input: { kind?: string; title: string; body?: string }) {
+  if (isLocalToken(getToken())) return localCreateNote(input);
   return api<{ id: string }>("/api/v1/notes", {
     method: "POST",
     body: JSON.stringify(input),

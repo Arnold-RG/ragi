@@ -1,8 +1,7 @@
 import { pingHealth } from "./api/client";
 import { changePassword, logout, me } from "./api/auth";
 import { createNote, listNotes } from "./api/secretary";
-import { isUnlocked, clearSession, getSessionMeta, getToken } from "./state/session";
-import { isLocalToken } from "./vault/localAuth";
+import { isUnlocked, clearSession, getSessionMeta } from "./state/session";
 import { goRoom, lockNav, renderShell, setApiPill, setGateMode, unlockNav, type Room } from "./ui/shell";
 import { renderUnlock } from "./ui/unlock";
 import { renderChamber } from "./ui/chamber";
@@ -188,9 +187,7 @@ export async function startApp(root: HTMLElement) {
       goRoom("vault", shell, false);
     });
     await paintRoom("home");
-    if (!isLocalToken(getToken())) {
-      await refreshDen();
-    }
+    await refreshDen();
     try {
       const profile = await me();
       shell.hpLine.textContent = profile.handle;

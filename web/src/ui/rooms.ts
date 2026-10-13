@@ -90,8 +90,13 @@ async function loadDash(root: HTMLElement): Promise<Dashboard | null> {
   try {
     return await getDashboard();
   } catch (err) {
-    const msg = err instanceof ApiError ? err.message : "The board could not be opened.";
-    root.innerHTML = `${roomHead("", "Signal fault", "")}<p class="msg bad" role="alert">${esc(msg)}</p>`;
+    const msg =
+      err instanceof ApiError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : "The board could not be opened.";
+    root.innerHTML = `${roomHead("", "Could not open", "")}<p class="msg bad" role="alert">${esc(msg)}</p>`;
     return null;
   }
 }
@@ -102,18 +107,45 @@ export async function renderHome(root: HTMLElement) {
   if (!dash) return;
   const hour = new Date().getHours();
   const hello = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const topProjects = [...dash.projects].sort((a, b) => b.progress - a.progress).slice(0, 4);
+  const openTasks = dash.activitiesToday.filter((a) => !a.done).length;
+  const doneTasks = dash.activitiesToday.filter((a) => a.done).length;
+  const nextCall = dash.meetingsUpcoming[0];
+  const nextReminder = dash.reminders[0];
+  const topProjects = [...dash.projects].sort((a, b) => b.progress - a.progress).slice(0, 5);
+  const topGoals = [...dash.goals].sort((a, b) => b.progress - a.progress).slice(0, 4);
+  const dayLabel = new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(new Date());
 
   root.innerHTML = `
-    ${roomHead("", "Today", `${hello}. Your day board for tasks, calls, and project momentum.`)}
+    ${roomHead("", "Today", `${hello}. One board for tasks, calls, money, and project momentum.`)}
     <div class="board">
+      <div class="day-banner">
+        <div>
+          <h3>${esc(dayLabel)}</h3>
+          <p>${
+            nextCall
+              ? `Next call: ${esc(nextCall.title)} · ${esc(new Date(nextCall.startsAt).toLocaleString())}`
+              : "No calls booked yet — add one in Schedule when you need it."
+          }</p>
+        </div>
+        <div class="day-banner-meta">
+          <span class="chip">Tasks <strong>${openTasks}</strong> open</span>
+          <span class="chip">Done <strong>${doneTasks}</strong></span>
+          <span class="chip">Calls <strong>${dash.meetingsUpcoming.length}</strong></span>
+          <span class="chip">Cash <strong>${money(dash.finance.balanceCents)}</strong></span>
+        </div>
+      </div>
+
       ${productivityStrip(dash)}
 
-      <div class="two-col">
-        <section class="board-section" style="border-top:0;padding-top:0">
+      <div class="three-col">
+        <section class="panel-card">
           <div class="board-section-head">
             <h3>Daily tasks</h3>
-            <p>Check off what you finish</p>
+            <p>${openTasks} still open</p>
           </div>
           <ul class="jobs" id="homeActs">
             ${
@@ -134,10 +166,10 @@ export async function renderHome(root: HTMLElement) {
           </form>
         </section>
 
-        <section class="board-section" style="border-top:0;padding-top:0">
+        <section class="panel-card">
           <div class="board-section-head">
             <h3>Calls & meetings</h3>
-            <p>Next on your schedule</p>
+            <p>Upcoming</p>
           </div>
           <ul class="jobs">
             ${
@@ -152,21 +184,69 @@ export async function renderHome(root: HTMLElement) {
                 : `<li class="entry is-empty"><p class="entry-title">Nothing booked. Add calls in Schedule.</p></li>`
             }
           </ul>
-          <p class="hint" style="margin-top:0.85rem">Cash on hand: <strong>${money(dash.finance.balanceCents)}</strong></p>
+          <ul class="detail-list">
+            <li><span>Next call</span><b>${nextCall ? esc(new Date(nextCall.startsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) : "—"}</b></li>
+            <li><span>Reminders</span><b>${dash.reminders.length}</b></li>
+          </ul>
+        </section>
+
+        <section class="panel-card">
+          <div class="board-section-head">
+            <h3>Reminders</h3>
+            <p>Due soon</p>
+          </div>
+          <ul class="jobs">
+            ${
+              dash.reminders.length
+                ? dash.reminders
+                    .slice(0, 6)
+                    .map(
+                      (r) =>
+                        `<li class="entry"><div class="entry-copy"><p class="entry-title">${esc(r.title)}</p><p class="entry-meta">${esc(r.priority)} · ${esc(new Date(r.dueAt).toLocaleString())}</p></div></li>`,
+                    )
+                    .join("")
+                : `<li class="entry is-empty"><p class="entry-title">${nextReminder ? "" : "No open reminders."}</p></li>`
+            }
+          </ul>
+          <ul class="detail-list">
+            <li><span>Income</span><b>${money(dash.finance.incomeCents)}</b></li>
+            <li><span>Spent</span><b>${money(dash.finance.expenseCents)}</b></li>
+            <li><span>Balance</span><b>${money(dash.finance.balanceCents)}</b></li>
+          </ul>
         </section>
       </div>
 
-      <section class="board-section">
-        <div class="board-section-head">
-          <h3>Project productivity</h3>
-          <p>Top personal / work projects</p>
-        </div>
-        ${
-          topProjects.length
-            ? topProjects.map((p) => meter(p.title, p.progress, p.realm)).join("")
-            : `<p class="empty">Create projects in Work to track productivity here.</p>`
-        }
-      </section>
+      <div class="two-col">
+        <section class="panel-card">
+          <div class="board-section-head">
+            <h3>Project productivity</h3>
+            <p>${dash.projects.length} active · avg ${dash.charts.projectAvgProgress}%</p>
+          </div>
+          ${
+            topProjects.length
+              ? topProjects.map((p) => meter(p.title, p.progress, p.realm)).join("")
+              : `<p class="empty">Create projects in Work to track productivity here.</p>`
+          }
+          <div style="margin-top:0.85rem">${directionMap(dash)}</div>
+        </section>
+
+        <section class="panel-card">
+          <div class="board-section-head">
+            <h3>Goals & focus</h3>
+            <p>Avg ${dash.charts.goalAvgProgress}%</p>
+          </div>
+          ${
+            topGoals.length
+              ? topGoals.map((g) => meter(g.title, g.progress, g.realm)).join("")
+              : `<p class="empty">Add goals in Work so they show up here.</p>`
+          }
+          <ul class="detail-list">
+            <li><span>Work projects</span><b>${dash.projects.filter((p) => p.realm === "work").length}</b></li>
+            <li><span>Personal projects</span><b>${dash.projects.filter((p) => p.realm === "personal").length}</b></li>
+            <li><span>Urgent plans</span><b>${dash.emergencies.filter((e) => e.active).length}</b></li>
+          </ul>
+        </section>
+      </div>
     </div>
   `;
 
