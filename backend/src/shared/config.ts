@@ -18,6 +18,8 @@ const schema = z.object({
   RAGI_CACHE_BUDGET_MB: z.coerce.number().int().positive().default(4096),
   RAGI_WORKER_THREADS: z.coerce.number().int().positive().default(8),
   DATABASE_URL: z.string().min(1),
+  /** Optional absolute durable data directory (defaults to backend/prisma/data). */
+  RAGI_DATA_DIR: z.string().optional().default(""),
   REDIS_URL: z.string().optional().default(""),
   RAGI_MASTER_KEY: z.string().min(32),
   RAGI_SESSION_SECRET: z.string().min(32),

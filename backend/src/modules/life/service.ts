@@ -1,6 +1,7 @@
 import { db } from "../../shared/db.js";
 import { withOwnerVault } from "../../shared/vault.js";
 import { notFound } from "../../shared/errors.js";
+import { touchVault } from "../../shared/storage/persist.js";
 
 export async function listProjects(ownerId: string, realm?: string) {
   const { dec } = await withOwnerVault(ownerId);
@@ -44,6 +45,7 @@ export async function createProject(
       dueAt: input.dueAt ? new Date(input.dueAt) : null,
     },
   });
+  touchVault(ownerId, "project");
   return { id: row.id, progress: row.progress };
 }
 
@@ -81,6 +83,7 @@ export async function updateProject(
             : null,
     },
   });
+  touchVault(ownerId, "project");
   return { id: row.id, progress: row.progress, status: row.status };
 }
 
@@ -113,6 +116,7 @@ export async function createGoal(
       targetEnc: input.target ? enc(input.target) : null,
     },
   });
+  touchVault(ownerId, "goal");
   return { id: row.id };
 }
 
@@ -136,6 +140,7 @@ export async function updateGoal(
       targetEnc: input.target !== undefined ? enc(input.target) : undefined,
     },
   });
+  touchVault(ownerId, "goal");
   return { id: row.id, progress: row.progress };
 }
 
@@ -176,6 +181,7 @@ export async function createActivity(
       day,
     },
   });
+  touchVault(ownerId, "activity");
   return { id: row.id };
 }
 
@@ -186,6 +192,7 @@ export async function toggleActivity(ownerId: string, id: string) {
     where: { id },
     data: { done: !existing.done },
   });
+  touchVault(ownerId, "activity");
   return { id: row.id, done: row.done };
 }
 
@@ -233,6 +240,7 @@ export async function createFinance(
       at: input.at ? new Date(input.at) : new Date(),
     },
   });
+  touchVault(ownerId, "finance");
   return { id: row.id, amountCents: row.amountCents };
 }
 
@@ -269,6 +277,7 @@ export async function createMeeting(
       endsAt: new Date(input.endsAt),
     },
   });
+  touchVault(ownerId, "meeting");
   return { id: row.id };
 }
 
@@ -303,6 +312,7 @@ export async function createReminder(
       priority: input.priority ?? "normal",
     },
   });
+  touchVault(ownerId, "reminder");
   return { id: row.id };
 }
 
@@ -310,6 +320,7 @@ export async function completeReminder(ownerId: string, id: string) {
   const existing = await db.reminder.findFirst({ where: { id, ownerId } });
   if (!existing) throw notFound("reminder_not_found");
   await db.reminder.update({ where: { id }, data: { done: true } });
+  touchVault(ownerId, "reminder");
   return { ok: true as const };
 }
 
@@ -343,6 +354,7 @@ export async function createEmergency(
       severity: input.severity ?? "high",
     },
   });
+  touchVault(ownerId, "emergency");
   return { id: row.id };
 }
 
@@ -350,5 +362,6 @@ export async function resolveEmergency(ownerId: string, id: string) {
   const existing = await db.emergency.findFirst({ where: { id, ownerId } });
   if (!existing) throw notFound("emergency_not_found");
   await db.emergency.update({ where: { id }, data: { active: false } });
+  touchVault(ownerId, "emergency");
   return { ok: true as const };
 }

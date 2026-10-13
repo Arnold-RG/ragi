@@ -16,6 +16,8 @@ Default API: `VITE_API_ORIGIN` (local `http://127.0.0.1:8787`)
 | G-55 GOLD | `GET|POST /api/v1/finance` |
 | C-88 CLOCK | `/meetings` · `/reminders` · `/emergencies` |
 | CAST / Hey Ragi | `POST /api/v1/ai/chat` (Gemini if key set, else local vault brain) |
+| Storage status / snapshots | `GET /api/v1/storage/status` · `/snapshots` · `POST /snapshot` |
+| Export / restore (merge) | `GET /api/v1/storage/export` · `POST /api/v1/storage/restore` |
 | API pill | `GET /health` |
 
 Mic jump is local Web Audio → amber scribe sprite.

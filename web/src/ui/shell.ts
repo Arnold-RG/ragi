@@ -44,18 +44,32 @@ export function renderShell(root: HTMLElement) {
       <section id="roomClock" class="view"></section>
       <section id="roomMap" class="view"></section>
       <section id="roomDen" class="view">
-        <p class="prompt">&gt; DEN <span class="blink">_</span></p>
-        <p class="lore">Side archive for sealed notes. Sparse on purpose.</p>
-        <div class="stat-box">
-          <h3>LEDGER</h3>
-          <ul class="jobs" id="noteList"><li><span>locked until hall opens</span><span>—</span></li></ul>
-          <div class="job-form">
-            <input id="noteTitle" placeholder="note title" />
-            <input id="noteBody" placeholder="body" />
-            <button type="button" id="noteAdd">INSCRIBE</button>
+        <p class="prompt">&gt; E-77 DEN · VAULT MEMORY <span class="blink">_</span></p>
+        <p class="lore">Notes plus durable storage. Snapshots are append-only — code edits never erase them.</p>
+        <div class="dash-grid">
+          <div class="stat-box">
+            <h3>STORAGE BACKEND</h3>
+            <div id="storeStatus" class="hint">loading…</div>
+            <div class="job-form inline" style="margin-top:0.5rem">
+              <button type="button" id="snapBtn">SEAL SNAPSHOT</button>
+              <button type="button" id="exportBtn">EXPORT JSON</button>
+            </div>
+          </div>
+          <div class="stat-box">
+            <h3>MEMORY SNAPSHOTS</h3>
+            <ul class="jobs" id="snapList"><li><span>none yet</span><span>—</span></li></ul>
+          </div>
+          <div class="stat-box wide">
+            <h3>NOTE LEDGER</h3>
+            <ul class="jobs" id="noteList"><li><span>locked until hall opens</span><span>—</span></li></ul>
+            <div class="job-form">
+              <input id="noteTitle" placeholder="note title" />
+              <input id="noteBody" placeholder="body" />
+              <button type="button" id="noteAdd">INSCRIBE</button>
+            </div>
           </div>
         </div>
-        <p class="hint">API ORIGIN :: ${API_ORIGIN}</p>
+        <p class="hint">API ORIGIN :: ${API_ORIGIN} · RESTORE MERGES — NEVER WIPES SEALS</p>
       </section>
       <div class="dead-end" id="voidMsg">
         S-00 VOID // YOU WANDERED INTO NOTHING.<br />

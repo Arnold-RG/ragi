@@ -4,6 +4,8 @@ import { initCache, closeCache } from "./shared/redis.js";
 import { db } from "./shared/db.js";
 import { logger } from "./shared/logger.js";
 import { runtimeReport } from "./shared/memory.js";
+import { storageStatus } from "./shared/storage/snapshots.js";
+import { backupsRoot, dataRoot } from "./shared/storage/paths.js";
 
 async function main() {
   if (!process.env.NODE_OPTIONS?.includes("max-old-space-size") && env.RAGI_HEAP_MB >= 1024) {
@@ -16,8 +18,11 @@ async function main() {
     );
   }
 
+  dataRoot();
+  backupsRoot();
   await initCache();
   const app = await buildApp();
+  logger.info(storageStatus(), "durable vault storage ready");
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "shutting down");

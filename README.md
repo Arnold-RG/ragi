@@ -12,6 +12,14 @@ Dark-age CRT chamber in the browser, Fastify vault on the wire. Three gates befo
 
 CAST uses Gemini when `GEMINI_API_KEY` is set; otherwise the **local vault secretary** answers from your real projects, finance, meetings, and goals (no more dead signal).
 
+### Durable vault storage
+
+- Live data: SQLite at `backend/prisma/data/ragi.db` (or Postgres volume in Docker)
+- Memory snapshots: append-only JSON + DB copies under `backend/prisma/data/backups/`
+- Every write schedules a snapshot; **E-77 DEN** can seal, export, and merge-restore
+- `npm run reseed` is blocked unless `RAGI_ALLOW_WIPE=YES` — code changes never erase vault data
+- Owner seals stay immutable; restore only **merges** rows
+
 ### Layers
 
 `bootstrap` → `shared` (db/crypto/vault) → `modules` (auth, secretary, calendar, ai) · `web` talks only to `/api/v1/*` + `/health`

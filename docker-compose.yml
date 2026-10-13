@@ -60,10 +60,14 @@ services:
     environment:
       DATABASE_URL: postgresql://ragi:${POSTGRES_PASSWORD:-ragi_change_me}@postgres:5432/ragi?schema=public
       REDIS_URL: redis://redis:6379
+      RAGI_DATA_DIR: /var/ragi/data
       RAGI_HEAP_MB: "28672"
       NODE_OPTIONS: --max-old-space-size=28672
     ports:
       - "8787:8787"
+    volumes:
+      # Append-only JSON + DB file snapshots survive image rebuilds
+      - ragi_vault:/var/ragi/data
     # Soft ceiling on a 32GB machine (API + headroom for OS/DB/Redis)
     deploy:
       resources:
@@ -87,3 +91,4 @@ services:
 volumes:
   ragi_pg:
   ragi_redis:
+  ragi_vault:

@@ -1,6 +1,8 @@
 import { db } from "../../shared/db.js";
 import { withOwnerVault } from "../../shared/vault.js";
 import { notFound } from "../../shared/errors.js";
+import { touchVault } from "../../shared/storage/persist.js";
+import { exportVault } from "../../shared/storage/export-vault.js";
 
 export type JobStatus = "watch" | "draft" | "applied" | "interview" | "offer" | "closed";
 
@@ -15,6 +17,7 @@ export async function setMode(ownerId: string, mode: "work" | "personal") {
     create: { ownerId, mode },
     update: { mode },
   });
+  touchVault(ownerId, "mode");
   return { mode: row.mode };
 }
 
@@ -89,6 +92,7 @@ export async function createJob(
       notesEnc: input.notes ? enc(input.notes) : null,
     },
   });
+  touchVault(ownerId, "job");
   return { id: row.id, status: row.status };
 }
 
@@ -113,6 +117,7 @@ export async function updateJob(
   if (input.url !== undefined) data.urlEnc = input.url ? enc(input.url) : null;
   if (input.notes !== undefined) data.notesEnc = input.notes ? enc(input.notes) : null;
   const row = await db.jobEntry.update({ where: { id }, data });
+  touchVault(ownerId, "job");
   return { id: row.id, status: row.status };
 }
 
@@ -147,6 +152,7 @@ export async function createFocus(
       endsAt: new Date(input.endsAt),
     },
   });
+  touchVault(ownerId, "focus");
   return { id: row.id };
 }
 
@@ -154,6 +160,7 @@ export async function completeFocus(ownerId: string, id: string) {
   const existing = await db.focusBlock.findFirst({ where: { id, ownerId } });
   if (!existing) throw notFound("focus_not_found");
   await db.focusBlock.update({ where: { id }, data: { completed: true } });
+  touchVault(ownerId, "focus");
   return { ok: true as const };
 }
 
@@ -184,35 +191,10 @@ export async function createNote(
       bodyEnc: enc(input.body),
     },
   });
+  touchVault(ownerId, "note");
   return { id: row.id };
 }
 
 export async function exportAll(ownerId: string) {
-  const { dec } = await withOwnerVault(ownerId);
-  const [jobs, notes, focus, mode] = await Promise.all([
-    db.jobEntry.findMany({ where: { ownerId } }),
-    db.secureNote.findMany({ where: { ownerId } }),
-    db.focusBlock.findMany({ where: { ownerId } }),
-    db.modeState.findUnique({ where: { ownerId } }),
-  ]);
-  return {
-    exportedAt: new Date().toISOString(),
-    mode: mode?.mode ?? "work",
-    jobs: jobs.map((r) => ({
-      title: dec(r.titleEnc),
-      company: r.companyEnc ? dec(r.companyEnc) : null,
-      status: r.status,
-    })),
-    notes: notes.map((r) => ({
-      kind: r.kind,
-      title: dec(r.titleEnc),
-      body: dec(r.bodyEnc),
-    })),
-    focus: focus.map((r) => ({
-      label: dec(r.labelEnc),
-      startsAt: r.startsAt,
-      endsAt: r.endsAt,
-      completed: r.completed,
-    })),
-  };
+  return exportVault(ownerId);
 }
