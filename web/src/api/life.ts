@@ -69,8 +69,77 @@ export function createProject(input: {
   });
 }
 
-export function patchProject(id: string, input: { progress?: number; status?: string }) {
+export function patchProject(
+  id: string,
+  input: { title?: string; notes?: string; progress?: number; status?: string; realm?: string },
+) {
   return api<{ id: string }>(`/api/v1/projects/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteProject(id: string) {
+  return api<{ ok: boolean; archived: boolean }>(`/api/v1/projects/${id}`, { method: "DELETE" });
+}
+
+export function patchGoal(
+  id: string,
+  input: { title?: string; progress?: number; status?: string; target?: string },
+) {
+  return api<{ id: string }>(`/api/v1/goals/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteGoal(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/goals/${id}`, { method: "DELETE" });
+}
+
+export function deleteActivity(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/activities/${id}`, { method: "DELETE" });
+}
+
+export function patchActivity(id: string, input: { title?: string; done?: boolean }) {
+  return api<{ id: string }>(`/api/v1/activities/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteFinance(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/finance/${id}`, { method: "DELETE" });
+}
+
+export function patchFinance(
+  id: string,
+  input: { label?: string; amount?: number; kind?: string; category?: string },
+) {
+  return api<{ id: string }>(`/api/v1/finance/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteMeeting(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/meetings/${id}`, { method: "DELETE" });
+}
+
+export function deleteReminder(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/reminders/${id}`, { method: "DELETE" });
+}
+
+export function deleteEmergency(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/emergencies/${id}`, { method: "DELETE" });
+}
+
+export function deleteNote(id: string) {
+  return api<{ ok: boolean }>(`/api/v1/notes/${id}`, { method: "DELETE" });
+}
+
+export function patchNote(id: string, input: { title?: string; body?: string }) {
+  return api<{ id: string }>(`/api/v1/notes/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });

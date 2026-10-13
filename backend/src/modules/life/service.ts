@@ -2,11 +2,12 @@ import { db } from "../../shared/db.js";
 import { withOwnerVault } from "../../shared/vault.js";
 import { notFound } from "../../shared/errors.js";
 import { touchVault } from "../../shared/storage/persist.js";
+import { createSnapshot } from "../../shared/storage/snapshots.js";
 
 export async function listProjects(ownerId: string, realm?: string) {
   const { dec } = await withOwnerVault(ownerId);
   const rows = await db.project.findMany({
-    where: { ownerId, ...(realm ? { realm } : {}) },
+    where: { ownerId, archived: false, ...(realm ? { realm } : {}) },
     orderBy: { updatedAt: "desc" },
   });
   return {
@@ -18,6 +19,7 @@ export async function listProjects(ownerId: string, realm?: string) {
       status: p.status,
       progress: p.progress,
       dueAt: p.dueAt,
+      archived: p.archived,
     })),
   };
 }
@@ -89,7 +91,10 @@ export async function updateProject(
 
 export async function listGoals(ownerId: string) {
   const { dec } = await withOwnerVault(ownerId);
-  const rows = await db.goal.findMany({ where: { ownerId }, orderBy: { updatedAt: "desc" } });
+  const rows = await db.goal.findMany({
+    where: { ownerId, archived: false },
+    orderBy: { updatedAt: "desc" },
+  });
   return {
     goals: rows.map((g) => ({
       id: g.id,
@@ -152,7 +157,7 @@ export async function listActivities(ownerId: string, day?: string) {
   const end = new Date(base);
   end.setHours(23, 59, 59, 999);
   const rows = await db.activity.findMany({
-    where: { ownerId, day: { gte: start, lte: end } },
+    where: { ownerId, archived: false, day: { gte: start, lte: end } },
     orderBy: { createdAt: "asc" },
   });
   return {
@@ -199,7 +204,7 @@ export async function toggleActivity(ownerId: string, id: string) {
 export async function listFinance(ownerId: string) {
   const { dec } = await withOwnerVault(ownerId);
   const rows = await db.financeEntry.findMany({
-    where: { ownerId },
+    where: { ownerId, archived: false },
     orderBy: { at: "desc" },
     take: 100,
   });
@@ -247,7 +252,7 @@ export async function createFinance(
 export async function listMeetings(ownerId: string) {
   const { dec } = await withOwnerVault(ownerId);
   const rows = await db.meeting.findMany({
-    where: { ownerId },
+    where: { ownerId, archived: false },
     orderBy: { startsAt: "asc" },
     take: 50,
   });
@@ -284,7 +289,7 @@ export async function createMeeting(
 export async function listReminders(ownerId: string) {
   const { dec } = await withOwnerVault(ownerId);
   const rows = await db.reminder.findMany({
-    where: { ownerId },
+    where: { ownerId, archived: false },
     orderBy: { dueAt: "asc" },
     take: 50,
   });
@@ -327,7 +332,7 @@ export async function completeReminder(ownerId: string, id: string) {
 export async function listEmergencies(ownerId: string) {
   const { dec } = await withOwnerVault(ownerId);
   const rows = await db.emergency.findMany({
-    where: { ownerId },
+    where: { ownerId, archived: false },
     orderBy: { updatedAt: "desc" },
   });
   return {
@@ -364,4 +369,244 @@ export async function resolveEmergency(ownerId: string, id: string) {
   await db.emergency.update({ where: { id }, data: { active: false } });
   touchVault(ownerId, "emergency");
   return { ok: true as const };
+}
+
+/** Soft-delete: snapshot first, then archive. Rows stay in DB forever. */
+async function archiveRow(
+  ownerId: string,
+  kind: string,
+  id: string,
+  finder: () => Promise<{ id: string } | null>,
+  archiver: () => Promise<unknown>,
+) {
+  const existing = await finder();
+  if (!existing) throw notFound(`${kind}_not_found`);
+  await createSnapshot(ownerId, `pre-archive-${kind}`);
+  await archiver();
+  touchVault(ownerId, `archive-${kind}`);
+  return { ok: true as const, archived: true, id, durable: true };
+}
+
+export async function archiveProject(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "project",
+    id,
+    () => db.project.findFirst({ where: { id, ownerId } }),
+    () => db.project.update({ where: { id }, data: { archived: true } }),
+  );
+}
+
+export async function restoreProject(ownerId: string, id: string) {
+  const existing = await db.project.findFirst({ where: { id, ownerId } });
+  if (!existing) throw notFound("project_not_found");
+  await db.project.update({ where: { id }, data: { archived: false } });
+  touchVault(ownerId, "project-restore");
+  return { ok: true as const, id };
+}
+
+export async function archiveGoal(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "goal",
+    id,
+    () => db.goal.findFirst({ where: { id, ownerId } }),
+    () => db.goal.update({ where: { id }, data: { archived: true } }),
+  );
+}
+
+export async function archiveActivity(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "activity",
+    id,
+    () => db.activity.findFirst({ where: { id, ownerId } }),
+    () => db.activity.update({ where: { id }, data: { archived: true } }),
+  );
+}
+
+export async function updateActivity(
+  ownerId: string,
+  id: string,
+  input: Partial<{ title: string; kind: string; done: boolean }>,
+) {
+  const existing = await db.activity.findFirst({ where: { id, ownerId } });
+  if (!existing) throw notFound("activity_not_found");
+  const { enc } = await withOwnerVault(ownerId);
+  const row = await db.activity.update({
+    where: { id },
+    data: {
+      titleEnc: input.title !== undefined ? enc(input.title) : undefined,
+      kind: input.kind,
+      done: input.done,
+    },
+  });
+  touchVault(ownerId, "activity");
+  return { id: row.id, done: row.done };
+}
+
+export async function updateFinance(
+  ownerId: string,
+  id: string,
+  input: Partial<{ kind: string; amount: number; label: string; category: string }>,
+) {
+  const existing = await db.financeEntry.findFirst({ where: { id, ownerId } });
+  if (!existing) throw notFound("finance_not_found");
+  const { enc } = await withOwnerVault(ownerId);
+  const row = await db.financeEntry.update({
+    where: { id },
+    data: {
+      kind: input.kind,
+      amountCents:
+        input.amount !== undefined ? Math.round(Math.abs(input.amount) * 100) : undefined,
+      labelEnc: input.label !== undefined ? enc(input.label) : undefined,
+      categoryEnc: input.category !== undefined ? enc(input.category) : undefined,
+    },
+  });
+  touchVault(ownerId, "finance");
+  return { id: row.id };
+}
+
+export async function archiveFinance(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "finance",
+    id,
+    () => db.financeEntry.findFirst({ where: { id, ownerId } }),
+    () => db.financeEntry.update({ where: { id }, data: { archived: true } }),
+  );
+}
+
+export async function updateMeeting(
+  ownerId: string,
+  id: string,
+  input: Partial<{ title: string; place: string; startsAt: string; endsAt: string; status: string }>,
+) {
+  const existing = await db.meeting.findFirst({ where: { id, ownerId } });
+  if (!existing) throw notFound("meeting_not_found");
+  const { enc } = await withOwnerVault(ownerId);
+  const row = await db.meeting.update({
+    where: { id },
+    data: {
+      titleEnc: input.title !== undefined ? enc(input.title) : undefined,
+      placeEnc: input.place !== undefined ? enc(input.place) : undefined,
+      startsAt: input.startsAt ? new Date(input.startsAt) : undefined,
+      endsAt: input.endsAt ? new Date(input.endsAt) : undefined,
+      status: input.status,
+    },
+  });
+  touchVault(ownerId, "meeting");
+  return { id: row.id };
+}
+
+export async function archiveMeeting(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "meeting",
+    id,
+    () => db.meeting.findFirst({ where: { id, ownerId } }),
+    () => db.meeting.update({ where: { id }, data: { archived: true } }),
+  );
+}
+
+export async function updateReminder(
+  ownerId: string,
+  id: string,
+  input: Partial<{ title: string; dueAt: string; priority: string; done: boolean }>,
+) {
+  const existing = await db.reminder.findFirst({ where: { id, ownerId } });
+  if (!existing) throw notFound("reminder_not_found");
+  const { enc } = await withOwnerVault(ownerId);
+  const row = await db.reminder.update({
+    where: { id },
+    data: {
+      titleEnc: input.title !== undefined ? enc(input.title) : undefined,
+      dueAt: input.dueAt ? new Date(input.dueAt) : undefined,
+      priority: input.priority,
+      done: input.done,
+    },
+  });
+  touchVault(ownerId, "reminder");
+  return { id: row.id };
+}
+
+export async function archiveReminder(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "reminder",
+    id,
+    () => db.reminder.findFirst({ where: { id, ownerId } }),
+    () => db.reminder.update({ where: { id }, data: { archived: true } }),
+  );
+}
+
+export async function updateEmergency(
+  ownerId: string,
+  id: string,
+  input: Partial<{ title: string; body: string; severity: string; active: boolean }>,
+) {
+  const existing = await db.emergency.findFirst({ where: { id, ownerId } });
+  if (!existing) throw notFound("emergency_not_found");
+  const { enc } = await withOwnerVault(ownerId);
+  const row = await db.emergency.update({
+    where: { id },
+    data: {
+      titleEnc: input.title !== undefined ? enc(input.title) : undefined,
+      bodyEnc: input.body !== undefined ? enc(input.body) : undefined,
+      severity: input.severity,
+      active: input.active,
+    },
+  });
+  touchVault(ownerId, "emergency");
+  return { id: row.id };
+}
+
+export async function archiveEmergency(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "emergency",
+    id,
+    () => db.emergency.findFirst({ where: { id, ownerId } }),
+    () => db.emergency.update({ where: { id }, data: { archived: true } }),
+  );
+}
+
+export async function updateNote(
+  ownerId: string,
+  id: string,
+  input: Partial<{ title: string; body: string; kind: string }>,
+) {
+  const existing = await db.secureNote.findFirst({ where: { id, ownerId } });
+  if (!existing) throw notFound("note_not_found");
+  const { enc } = await withOwnerVault(ownerId);
+  const row = await db.secureNote.update({
+    where: { id },
+    data: {
+      titleEnc: input.title !== undefined ? enc(input.title) : undefined,
+      bodyEnc: input.body !== undefined ? enc(input.body) : undefined,
+      kind: input.kind,
+    },
+  });
+  touchVault(ownerId, "note");
+  return { id: row.id };
+}
+
+export async function archiveNote(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "note",
+    id,
+    () => db.secureNote.findFirst({ where: { id, ownerId } }),
+    () => db.secureNote.update({ where: { id }, data: { archived: true } }),
+  );
+}
+
+export async function archiveJob(ownerId: string, id: string) {
+  return archiveRow(
+    ownerId,
+    "job",
+    id,
+    () => db.jobEntry.findFirst({ where: { id, ownerId } }),
+    () => db.jobEntry.update({ where: { id }, data: { archived: true } }),
+  );
 }

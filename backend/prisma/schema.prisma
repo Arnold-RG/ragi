@@ -37,6 +37,7 @@ model Owner {
   meetings          Meeting[]
   reminders         Reminder[]
   emergencies       Emergency[]
+  githubTracks      GithubRepoTrack[]
 }
 
 model WebAuthnCredential {
@@ -92,12 +93,14 @@ model SecureNote {
   kind            String   @default("note")
   titleEnc        String
   bodyEnc         String
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, kind])
+  @@index([ownerId, archived])
 }
 
 model JobEntry {
@@ -108,12 +111,14 @@ model JobEntry {
   status          String   @default("watch")
   urlEnc          String?
   notesEnc        String?
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, status])
+  @@index([ownerId, archived])
 }
 
 model FocusBlock {
@@ -190,12 +195,14 @@ model Project {
   status          String   @default("active")
   progress        Int      @default(0)
   dueAt           DateTime?
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, realm, status])
+  @@index([ownerId, archived])
 }
 
 model Goal {
@@ -206,12 +213,14 @@ model Goal {
   status          String   @default("active")
   progress        Int      @default(0)
   targetEnc       String?
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, status])
+  @@index([ownerId, archived])
 }
 
 model Activity {
@@ -221,11 +230,13 @@ model Activity {
   kind            String   @default("task")
   day             DateTime
   done            Boolean  @default(false)
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, day])
+  @@index([ownerId, archived])
 }
 
 model FinanceEntry {
@@ -236,12 +247,14 @@ model FinanceEntry {
   labelEnc        String
   categoryEnc     String?
   at              DateTime @default(now())
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, at])
   @@index([ownerId, kind])
+  @@index([ownerId, archived])
 }
 
 model Meeting {
@@ -252,11 +265,13 @@ model Meeting {
   startsAt        DateTime
   endsAt          DateTime
   status          String   @default("scheduled")
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, startsAt])
+  @@index([ownerId, archived])
 }
 
 model Reminder {
@@ -266,11 +281,13 @@ model Reminder {
   dueAt           DateTime
   priority        String   @default("normal")
   done            Boolean  @default(false)
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, dueAt, done])
+  @@index([ownerId, archived])
 }
 
 model Emergency {
@@ -280,10 +297,28 @@ model Emergency {
   bodyEnc         String
   severity        String   @default("high")
   active          Boolean  @default(true)
+  archived        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, active])
+  @@index([ownerId, archived])
+}
+
+/// Owner-tuned completion % for GitHub repos (live API + durable overrides).
+model GithubRepoTrack {
+  id              String   @id @default(cuid())
+  ownerId         String
+  fullName        String
+  progress        Int      @default(0)
+  notesEnc        String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, fullName])
+  @@index([ownerId])
 }

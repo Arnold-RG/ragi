@@ -12,7 +12,15 @@ import { isUnlocked, clearSession } from "./state/session";
 import { goRoom, renderShell, setApiPill, unlockNav, lockNav, type Room } from "./ui/shell";
 import { renderUnlock } from "./ui/unlock";
 import { renderChamber } from "./ui/chamber";
-import { renderClock, renderForge, renderGold, renderHome, renderMap } from "./ui/rooms";
+import {
+  renderClock,
+  renderForge,
+  renderGold,
+  renderHome,
+  renderHub,
+  renderMap,
+} from "./ui/rooms";
+import { deleteNote, patchNote } from "./api/life";
 
 function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -38,9 +46,34 @@ export async function startApp(root: HTMLElement) {
       list.innerHTML = res.notes.length
         ? res.notes
             .slice(0, 8)
-            .map((n) => `<li><span>${esc(n.title)}</span><span>${esc(n.kind)}</span></li>`)
+            .map(
+              (n) =>
+                `<li class="row-actions"><span>${esc(n.title)}</span>
+                <span class="acts">
+                  <button type="button" data-nedit="${n.id}" data-title="${esc(n.title)}" data-body="${esc(n.body)}">EDIT</button>
+                  <button type="button" data-ndel="${n.id}">DEL</button>
+                </span></li>`,
+            )
             .join("")
         : `<li><span>empty ledger</span><span>—</span></li>`;
+
+      list.querySelectorAll<HTMLButtonElement>("[data-nedit]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const title = window.prompt("Note title", btn.dataset.title ?? "");
+          if (title === null) return;
+          const body = window.prompt("Note body", btn.dataset.body ?? "");
+          if (body === null) return;
+          await patchNote(btn.dataset.nedit!, { title, body });
+          await refreshDen();
+        });
+      });
+      list.querySelectorAll<HTMLButtonElement>("[data-ndel]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!window.confirm("Archive note? Snapshot first.")) return;
+          await deleteNote(btn.dataset.ndel!);
+          await refreshDen();
+        });
+      });
     } catch {
       list.innerHTML = `<li><span>ledger unreachable</span><span>!</span></li>`;
     }
@@ -123,6 +156,7 @@ export async function startApp(root: HTMLElement) {
     if (room === "forge") await renderForge(shell.forge);
     if (room === "gold") await renderGold(shell.gold);
     if (room === "clock") await renderClock(shell.clock);
+    if (room === "hub") await renderHub(shell.hub);
     if (room === "map") await renderMap(shell.map);
     if (room === "den") await refreshDen();
   }

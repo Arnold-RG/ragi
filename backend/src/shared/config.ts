@@ -30,6 +30,8 @@ const schema = z.object({
   OWNER_TOTP_ISSUER: z.string().default("RAGI"),
   GEMINI_API_KEY: z.string().optional().default(""),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+  GITHUB_TOKEN: z.string().optional().default(""),
+  GITHUB_USERNAME: z.string().default("Arnold-RG"),
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
   GOOGLE_REDIRECT_URI: z.string().optional().default(""),

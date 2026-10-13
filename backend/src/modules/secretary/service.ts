@@ -63,7 +63,10 @@ export async function getBriefing(ownerId: string) {
 
 export async function listJobs(ownerId: string) {
   const { dec } = await withOwnerVault(ownerId);
-  const rows = await db.jobEntry.findMany({ where: { ownerId }, orderBy: { updatedAt: "desc" } });
+  const rows = await db.jobEntry.findMany({
+    where: { ownerId, archived: false },
+    orderBy: { updatedAt: "desc" },
+  });
   return {
     jobs: rows.map((r) => ({
       id: r.id,
@@ -166,7 +169,10 @@ export async function completeFocus(ownerId: string, id: string) {
 
 export async function listNotes(ownerId: string) {
   const { dec } = await withOwnerVault(ownerId);
-  const rows = await db.secureNote.findMany({ where: { ownerId }, orderBy: { updatedAt: "desc" } });
+  const rows = await db.secureNote.findMany({
+    where: { ownerId, archived: false },
+    orderBy: { updatedAt: "desc" },
+  });
   return {
     notes: rows.map((r) => ({
       id: r.id,

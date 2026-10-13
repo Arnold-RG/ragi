@@ -7,11 +7,12 @@ export type Room =
   | "forge"
   | "gold"
   | "clock"
+  | "hub"
   | "map"
   | "den"
   | "void";
 
-const LOCKED: Room[] = ["hall", "home", "forge", "gold", "clock", "map", "den"];
+const LOCKED: Room[] = ["hall", "home", "forge", "gold", "clock", "hub", "map", "den"];
 
 export function renderShell(root: HTMLElement) {
   root.innerHTML = `
@@ -30,6 +31,7 @@ export function renderShell(root: HTMLElement) {
       <button type="button" data-room="forge" disabled>F-33 FORGE</button>
       <button type="button" data-room="gold" disabled>G-55 GOLD</button>
       <button type="button" data-room="clock" disabled>C-88 CLOCK</button>
+      <button type="button" data-room="hub" disabled>G-77 HUB</button>
       <button type="button" data-room="map" disabled>M-99 MAP</button>
       <button type="button" data-room="den" disabled>E-77 DEN</button>
       <button type="button" data-room="void">S-00 VOID</button>
@@ -42,6 +44,7 @@ export function renderShell(root: HTMLElement) {
       <section id="roomForge" class="view"></section>
       <section id="roomGold" class="view"></section>
       <section id="roomClock" class="view"></section>
+      <section id="roomHub" class="view"></section>
       <section id="roomMap" class="view"></section>
       <section id="roomDen" class="view">
         <p class="prompt">&gt; E-77 DEN · VAULT MEMORY <span class="blink">_</span></p>
@@ -85,6 +88,7 @@ export function renderShell(root: HTMLElement) {
     forge: root.querySelector("#roomForge") as HTMLElement,
     gold: root.querySelector("#roomGold") as HTMLElement,
     clock: root.querySelector("#roomClock") as HTMLElement,
+    hub: root.querySelector("#roomHub") as HTMLElement,
     map: root.querySelector("#roomMap") as HTMLElement,
     den: root.querySelector("#roomDen") as HTMLElement,
     voidMsg: root.querySelector("#voidMsg") as HTMLElement,
@@ -111,6 +115,7 @@ export function goRoom(room: Room, parts: ShellParts, unlocked: boolean) {
     "forge",
     "gold",
     "clock",
+    "hub",
     "map",
     "den",
   ];

@@ -154,4 +154,117 @@ export const lifeRoutes: FastifyPluginAsync = async (app) => {
     const params = z.object({ id: z.string() }).parse(req.params);
     return life.resolveEmergency(req.ragiOwnerId!, params.id);
   });
+
+  // Soft-delete (archive) — snapshots first; rows stay in durable DB
+  app.delete("/api/v1/projects/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveProject(req.ragiOwnerId!, params.id);
+  });
+  app.post("/api/v1/projects/:id/restore", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.restoreProject(req.ragiOwnerId!, params.id);
+  });
+  app.delete("/api/v1/goals/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveGoal(req.ragiOwnerId!, params.id);
+  });
+  app.patch("/api/v1/activities/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({
+        title: z.string().optional(),
+        kind: z.string().optional(),
+        done: z.boolean().optional(),
+      })
+      .parse(req.body);
+    return life.updateActivity(req.ragiOwnerId!, params.id, body);
+  });
+  app.delete("/api/v1/activities/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveActivity(req.ragiOwnerId!, params.id);
+  });
+  app.patch("/api/v1/finance/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({
+        kind: z.enum(["income", "expense", "budget"]).optional(),
+        amount: z.number().positive().optional(),
+        label: z.string().optional(),
+        category: z.string().optional(),
+      })
+      .parse(req.body);
+    return life.updateFinance(req.ragiOwnerId!, params.id, body);
+  });
+  app.delete("/api/v1/finance/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveFinance(req.ragiOwnerId!, params.id);
+  });
+  app.patch("/api/v1/meetings/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({
+        title: z.string().optional(),
+        place: z.string().optional(),
+        startsAt: z.string().datetime().optional(),
+        endsAt: z.string().datetime().optional(),
+        status: z.string().optional(),
+      })
+      .parse(req.body);
+    return life.updateMeeting(req.ragiOwnerId!, params.id, body);
+  });
+  app.delete("/api/v1/meetings/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveMeeting(req.ragiOwnerId!, params.id);
+  });
+  app.patch("/api/v1/reminders/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({
+        title: z.string().optional(),
+        dueAt: z.string().datetime().optional(),
+        priority: z.enum(["low", "normal", "high"]).optional(),
+        done: z.boolean().optional(),
+      })
+      .parse(req.body);
+    return life.updateReminder(req.ragiOwnerId!, params.id, body);
+  });
+  app.delete("/api/v1/reminders/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveReminder(req.ragiOwnerId!, params.id);
+  });
+  app.patch("/api/v1/emergencies/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({
+        title: z.string().optional(),
+        body: z.string().optional(),
+        severity: z.enum(["low", "high", "critical"]).optional(),
+        active: z.boolean().optional(),
+      })
+      .parse(req.body);
+    return life.updateEmergency(req.ragiOwnerId!, params.id, body);
+  });
+  app.delete("/api/v1/emergencies/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveEmergency(req.ragiOwnerId!, params.id);
+  });
+  app.patch("/api/v1/notes/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({
+        title: z.string().optional(),
+        body: z.string().optional(),
+        kind: z.string().optional(),
+      })
+      .parse(req.body);
+    return life.updateNote(req.ragiOwnerId!, params.id, body);
+  });
+  app.delete("/api/v1/notes/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveNote(req.ragiOwnerId!, params.id);
+  });
+  app.delete("/api/v1/jobs/:id", async (req) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    return life.archiveJob(req.ragiOwnerId!, params.id);
+  });
 };

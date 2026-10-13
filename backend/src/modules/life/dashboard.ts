@@ -32,25 +32,46 @@ export async function getDashboard(ownerId: string) {
     focus,
   ] = await Promise.all([
     db.modeState.findUnique({ where: { ownerId } }),
-    db.project.findMany({ where: { ownerId }, orderBy: { updatedAt: "desc" }, take: 40 }),
-    db.goal.findMany({ where: { ownerId }, orderBy: { updatedAt: "desc" }, take: 40 }),
+    db.project.findMany({
+      where: { ownerId, archived: false },
+      orderBy: { updatedAt: "desc" },
+      take: 40,
+    }),
+    db.goal.findMany({
+      where: { ownerId, archived: false },
+      orderBy: { updatedAt: "desc" },
+      take: 40,
+    }),
     db.activity.findMany({
-      where: { ownerId, day: { gte: day0, lte: day1 } },
+      where: { ownerId, archived: false, day: { gte: day0, lte: day1 } },
       orderBy: { createdAt: "asc" },
     }),
-    db.financeEntry.findMany({ where: { ownerId }, orderBy: { at: "desc" }, take: 200 }),
+    db.financeEntry.findMany({
+      where: { ownerId, archived: false },
+      orderBy: { at: "desc" },
+      take: 200,
+    }),
     db.meeting.findMany({
-      where: { ownerId, startsAt: { gte: now }, status: { not: "cancelled" } },
+      where: {
+        ownerId,
+        archived: false,
+        startsAt: { gte: now },
+        status: { not: "cancelled" },
+      },
       orderBy: { startsAt: "asc" },
       take: 20,
     }),
     db.reminder.findMany({
-      where: { ownerId, done: false },
+      where: { ownerId, archived: false, done: false },
       orderBy: { dueAt: "asc" },
       take: 30,
     }),
-    db.emergency.findMany({ where: { ownerId }, orderBy: { updatedAt: "desc" }, take: 20 }),
-    db.jobEntry.count({ where: { ownerId, status: { not: "closed" } } }),
+    db.emergency.findMany({
+      where: { ownerId, archived: false },
+      orderBy: { updatedAt: "desc" },
+      take: 20,
+    }),
+    db.jobEntry.count({ where: { ownerId, archived: false, status: { not: "closed" } } }),
     db.focusBlock.findFirst({
       where: { ownerId, completed: false, endsAt: { gte: now } },
       orderBy: { startsAt: "asc" },

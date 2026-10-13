@@ -629,6 +629,59 @@ body {
 .jobs .hot { color: #ff6b6b; }
 .lore strong { color: var(--amber); font-weight: normal; }
 
+.row-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+.row-actions .acts {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.row-actions .acts button,
+.gh-row .acts button {
+  font-family: var(--font-tiny);
+  font-size: 0.32rem;
+  padding: 0.3rem 0.28rem;
+  background: transparent;
+  border: 1px solid var(--edge);
+  color: var(--phosphor-dim);
+  cursor: pointer;
+}
+.row-actions .acts button:hover,
+.gh-row .acts button:hover {
+  color: var(--phosphor);
+  border-color: var(--phosphor-dim);
+}
+
+.gh-list { display: flex; flex-direction: column; gap: 0.55rem; }
+.gh-row {
+  border-top: 1px solid var(--edge);
+  padding: 0.45rem 0 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+.gh-row:first-child { border-top: none; }
+.gh-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+.gh-head a { color: var(--amber); text-decoration: none; }
+.gh-head a:hover { text-decoration: underline; }
+.gh-meta { color: var(--ghost); font-size: 0.95rem; }
+.linkish {
+  font-family: var(--font-tiny);
+  font-size: 0.32rem;
+  color: var(--amber);
+  text-decoration: none;
+  align-self: center;
+}
+
 .stat-box select {
   width: 100%;
   background: #020402;

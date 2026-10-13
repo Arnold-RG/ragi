@@ -18,6 +18,10 @@ Default API: `VITE_API_ORIGIN` (local `http://127.0.0.1:8787`)
 | CAST / Hey Ragi | `POST /api/v1/ai/chat` (Gemini if key set, else local vault brain) |
 | Storage status / snapshots | `GET /api/v1/storage/status` · `/snapshots` · `POST /snapshot` |
 | Export / restore (merge) | `GET /api/v1/storage/export` · `POST /api/v1/storage/restore` |
+| Edit / soft-delete | `PATCH` + `DELETE` on projects, goals, activities, finance, meetings, reminders, emergencies, notes, jobs |
+| GitHub hub | `GET /api/v1/github/repos` · `PUT /api/v1/github/progress` |
 | API pill | `GET /health` |
+
+DELETE soft-archives after a vault snapshot — rows stay in the DB.
 
 Mic jump is local Web Audio → amber scribe sprite.

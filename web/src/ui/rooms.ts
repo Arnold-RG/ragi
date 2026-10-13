@@ -7,15 +7,29 @@ import {
   createProject,
   createReminder,
   completeReminder,
+  deleteActivity,
+  deleteEmergency,
+  deleteFinance,
+  deleteGoal,
+  deleteMeeting,
+  deleteProject,
+  deleteReminder,
   getDashboard,
   localIsoFromInput,
   money,
+  patchGoal,
   patchProject,
   resolveEmergency,
   toggleActivity,
   type Dashboard,
 } from "../api/life";
+import { listGithubRepos, setGithubProgress } from "../api/github";
 import { ApiError } from "../api/client";
+
+function ask(label: string, fallback = "") {
+  const v = window.prompt(label, fallback);
+  return v === null ? null : v.trim();
+}
 
 function esc(s: string) {
   return s
@@ -167,8 +181,12 @@ export async function renderForge(root: HTMLElement) {
               ? dash.projects
                   .map(
                     (p) =>
-                      `<li><span>${esc(p.title)} · ${p.realm} · ${p.progress}%</span>
-                      <button type="button" data-bump="${p.id}" data-p="${Math.min(100, p.progress + 10)}">+10%</button></li>`,
+                      `<li class="row-actions"><span>${esc(p.title)} · ${p.realm} · ${p.progress}%</span>
+                      <span class="acts">
+                        <button type="button" data-bump="${p.id}" data-p="${Math.min(100, p.progress + 10)}">+10</button>
+                        <button type="button" data-pedit="${p.id}" data-title="${esc(p.title)}" data-prog="${p.progress}">EDIT</button>
+                        <button type="button" data-pdel="${p.id}">DEL</button>
+                      </span></li>`,
                   )
                   .join("")
               : `<li><span>no projects</span><span>—</span></li>`
@@ -188,7 +206,14 @@ export async function renderForge(root: HTMLElement) {
           ${
             dash.goals.length
               ? dash.goals
-                  .map((g) => `<li><span>${esc(g.title)}</span><span>${g.progress}%</span></li>`)
+                  .map(
+                    (g) =>
+                      `<li class="row-actions"><span>${esc(g.title)} · ${g.progress}%</span>
+                      <span class="acts">
+                        <button type="button" data-gedit="${g.id}" data-title="${esc(g.title)}" data-prog="${g.progress}">EDIT</button>
+                        <button type="button" data-gdel="${g.id}">DEL</button>
+                      </span></li>`,
+                  )
                   .join("")
               : `<li><span>no goals</span><span>—</span></li>`
           }
@@ -208,8 +233,11 @@ export async function renderForge(root: HTMLElement) {
               ? dash.activitiesToday
                   .map(
                     (a) =>
-                      `<li><span>${a.done ? "✓ " : "· "}${esc(a.title)}</span>
-                      <button type="button" data-act="${a.id}">TOGGLE</button></li>`,
+                      `<li class="row-actions"><span>${a.done ? "✓ " : "· "}${esc(a.title)}</span>
+                      <span class="acts">
+                        <button type="button" data-act="${a.id}">TOGGLE</button>
+                        <button type="button" data-adel="${a.id}">DEL</button>
+                      </span></li>`,
                   )
                   .join("")
               : `<li><span>empty day</span><span>—</span></li>`
@@ -219,6 +247,7 @@ export async function renderForge(root: HTMLElement) {
           <input id="actTitle" placeholder="activity for today" />
           <button type="button" id="actAdd">ADD</button>
         </div>
+        <p class="hint">DEL soft-archives after a snapshot — data stays in vault memory</p>
       </div>
     </div>
   `;
@@ -238,6 +267,55 @@ export async function renderForge(root: HTMLElement) {
   root.querySelectorAll<HTMLButtonElement>("[data-bump]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await patchProject(btn.dataset.bump!, { progress: Number(btn.dataset.p) });
+      await renderForge(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLButtonElement>("[data-pedit]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const title = ask("Edit project title", btn.dataset.title ?? "");
+      if (title === null) return;
+      const progRaw = ask("Progress %", btn.dataset.prog ?? "0");
+      if (progRaw === null) return;
+      await patchProject(btn.dataset.pedit!, {
+        title: title || undefined,
+        progress: Number(progRaw),
+      });
+      await renderForge(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLButtonElement>("[data-pdel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!window.confirm("Archive this project? Snapshot first — not wiped.")) return;
+      await deleteProject(btn.dataset.pdel!);
+      await renderForge(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLButtonElement>("[data-gedit]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const title = ask("Edit goal title", btn.dataset.title ?? "");
+      if (title === null) return;
+      const progRaw = ask("Progress %", btn.dataset.prog ?? "0");
+      if (progRaw === null) return;
+      await patchGoal(btn.dataset.gedit!, { title: title || undefined, progress: Number(progRaw) });
+      await renderForge(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLButtonElement>("[data-gdel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!window.confirm("Archive this goal? Snapshot sealed first.")) return;
+      await deleteGoal(btn.dataset.gdel!);
+      await renderForge(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLButtonElement>("[data-adel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!window.confirm("Archive activity?")) return;
+      await deleteActivity(btn.dataset.adel!);
       await renderForge(root);
     });
   });
@@ -300,7 +378,10 @@ export async function renderGold(root: HTMLElement) {
               ? f.recent
                   .map(
                     (e) =>
-                      `<li><span>${esc(e.label)}</span><span>${e.kind} ${money(e.amountCents)}</span></li>`,
+                      `<li class="row-actions"><span>${esc(e.label)} · ${e.kind} ${money(e.amountCents)}</span>
+                      <span class="acts">
+                        <button type="button" data-fdel="${e.id}">DEL</button>
+                      </span></li>`,
                   )
                   .join("")
               : `<li><span>empty ledger</span><span>—</span></li>`
@@ -313,6 +394,14 @@ export async function renderGold(root: HTMLElement) {
       </div>
     </div>
   `;
+
+  root.querySelectorAll<HTMLButtonElement>("[data-fdel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!window.confirm("Archive finance row? Snapshot first.")) return;
+      await deleteFinance(btn.dataset.fdel!);
+      await renderGold(root);
+    });
+  });
 
   root.querySelector("#finAdd")?.addEventListener("click", async () => {
     const amount = Number((root.querySelector("#finAmount") as HTMLInputElement).value);
@@ -347,7 +436,8 @@ export async function renderClock(root: HTMLElement) {
               ? dash.meetingsUpcoming
                   .map(
                     (m) =>
-                      `<li><span>${esc(m.title)}${m.place ? " · " + esc(m.place) : ""}</span><span>${new Date(m.startsAt).toLocaleString()}</span></li>`,
+                      `<li class="row-actions"><span>${esc(m.title)}${m.place ? " · " + esc(m.place) : ""} · ${new Date(m.startsAt).toLocaleString()}</span>
+                      <span class="acts"><button type="button" data-mdel="${m.id}">DEL</button></span></li>`,
                   )
                   .join("")
               : `<li><span>none upcoming</span><span>—</span></li>`
@@ -369,8 +459,11 @@ export async function renderClock(root: HTMLElement) {
               ? dash.reminders
                   .map(
                     (r) =>
-                      `<li><span>[${esc(r.priority)}] ${esc(r.title)}</span>
-                      <button type="button" data-rem="${r.id}">DONE</button></li>`,
+                      `<li class="row-actions"><span>[${esc(r.priority)}] ${esc(r.title)}</span>
+                      <span class="acts">
+                        <button type="button" data-rem="${r.id}">DONE</button>
+                        <button type="button" data-rdel="${r.id}">DEL</button>
+                      </span></li>`,
                   )
                   .join("")
               : `<li><span>board clear</span><span>—</span></li>`
@@ -391,8 +484,11 @@ export async function renderClock(root: HTMLElement) {
               ? dash.emergencies
                   .map(
                     (e) =>
-                      `<li><span class="${e.active ? "hot" : ""}">${e.active ? "LIVE " : "resolved "}${esc(e.severity)} · ${esc(e.title)} — ${esc(e.body)}</span>
-                      ${e.active ? `<button type="button" data-em="${e.id}">RESOLVE</button>` : `<span>—</span>`}</li>`,
+                      `<li class="row-actions"><span class="${e.active ? "hot" : ""}">${e.active ? "LIVE " : "resolved "}${esc(e.severity)} · ${esc(e.title)} — ${esc(e.body)}</span>
+                      <span class="acts">
+                        ${e.active ? `<button type="button" data-em="${e.id}">RESOLVE</button>` : ""}
+                        <button type="button" data-edel="${e.id}">DEL</button>
+                      </span></li>`,
                   )
                   .join("")
               : `<li><span>no emergency plans</span><span>—</span></li>`
@@ -407,6 +503,30 @@ export async function renderClock(root: HTMLElement) {
       </div>
     </div>
   `;
+
+  root.querySelectorAll<HTMLButtonElement>("[data-mdel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!window.confirm("Archive meeting?")) return;
+      await deleteMeeting(btn.dataset.mdel!);
+      await renderClock(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLButtonElement>("[data-rdel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!window.confirm("Archive reminder?")) return;
+      await deleteReminder(btn.dataset.rdel!);
+      await renderClock(root);
+    });
+  });
+
+  root.querySelectorAll<HTMLButtonElement>("[data-edel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!window.confirm("Archive emergency plan?")) return;
+      await deleteEmergency(btn.dataset.edel!);
+      await renderClock(root);
+    });
+  });
 
   root.querySelector("#meetAdd")?.addEventListener("click", async () => {
     const title = (root.querySelector("#meetTitle") as HTMLInputElement).value.trim();
@@ -464,6 +584,64 @@ export async function renderClock(root: HTMLElement) {
       await renderClock(root);
     });
   });
+}
+
+export async function renderHub(root: HTMLElement) {
+  root.innerHTML = `<p class="prompt">&gt; G-77 HUB · GITHUB <span class="blink">_</span></p><p class="lore">Loading GitHub projects…</p>`;
+  try {
+    const data = await listGithubRepos();
+    root.innerHTML = `
+      <p class="prompt">&gt; G-77 HUB · @${esc(data.login)} <span class="blink">_</span></p>
+      <p class="lore">
+        ${data.count} repos · avg done <strong>${data.avgProgress}%</strong> · remains <strong>${data.avgRemaining}%</strong>
+        · ${data.authenticated ? "token auth" : "public API"}
+      </p>
+      <div class="dash-grid">
+        <div class="stat-box wide">
+          <h3>PROJECT COMPLETION</h3>
+          <ul class="jobs gh-list">
+            ${
+              data.projects.length
+                ? data.projects
+                    .map(
+                      (p) => `
+              <li class="gh-row">
+                <div class="gh-head">
+                  <a href="${esc(p.url)}" target="_blank" rel="noreferrer">${esc(p.name)}</a>
+                  <span>${p.progress}% done · ${p.remaining}% left${p.overridden ? " · SET" : " · AUTO"}</span>
+                </div>
+                <div class="bar-track"><i style="width:${p.progress}%"></i></div>
+                <div class="gh-meta">${esc(p.language || "n/a")} · ${esc((p.description || "no description").slice(0, 80))}</div>
+                <div class="acts">
+                  <button type="button" data-gh="${esc(p.fullName)}" data-p="${p.progress}">SET %</button>
+                  <a class="linkish" href="${esc(p.url)}" target="_blank" rel="noreferrer">OPEN</a>
+                </div>
+              </li>`,
+                    )
+                    .join("")
+                : `<li><span>no repos found</span><span>—</span></li>`
+            }
+          </ul>
+        </div>
+      </div>
+      <p class="hint">AUTO = GitHub signals · SET % stores durable override in vault · never wipes history</p>
+    `;
+
+    root.querySelectorAll<HTMLButtonElement>("[data-gh]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const raw = ask(`Completion % for ${btn.dataset.gh}`, btn.dataset.p ?? "0");
+        if (raw === null) return;
+        const n = Math.min(100, Math.max(0, Number(raw)));
+        if (Number.isNaN(n)) return;
+        await setGithubProgress(btn.dataset.gh!, n);
+        await renderHub(root);
+      });
+    });
+  } catch (err) {
+    const msg = err instanceof ApiError ? err.message : "github_failed";
+    root.innerHTML = `<p class="prompt">&gt; G-77 HUB</p><p class="msg bad">${esc(msg)}</p>
+      <p class="hint">Public fetch uses Arnold-RG. Optional GITHUB_TOKEN in backend/.env for higher limits.</p>`;
+  }
 }
 
 export async function renderMap(root: HTMLElement) {
