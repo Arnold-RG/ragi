@@ -3,7 +3,8 @@ import { defineConfig } from "vite";
 const pages = process.env.GITHUB_PAGES === "true";
 
 export default defineConfig({
-  base: pages ? "/ragi/" : "/",
+  // Relative base works on GitHub project Pages (/ragi/) and local preview.
+  base: pages ? "./" : "/",
   server: {
     host: "127.0.0.1",
     port: 4173,
