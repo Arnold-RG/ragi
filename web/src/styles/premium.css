@@ -295,6 +295,12 @@ body.is-gate {
   gap: 0.85rem;
 }
 
+.vault-form[hidden],
+.recovery-box[hidden],
+.vault-footer[hidden] {
+  display: none !important;
+}
+
 .vault-field {
   display: grid;
   gap: 0.4rem;
