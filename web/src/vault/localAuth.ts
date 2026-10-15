@@ -5,13 +5,20 @@
  */
 
 const DB_NAME = "ragi-vault";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = "accounts";
 const SESS = "sessions";
 const LOCKS = "locks";
 const ITERATIONS = 310_000;
 const MAX_FAILS = 5;
 const LOCK_MS = 15 * 60 * 1000;
+
+export class LocalAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LocalAuthError";
+  }
+}
 
 export type LocalSession = {
   token: string;
@@ -213,13 +220,6 @@ function validateRegister(input: { email: string; handle: string; password: stri
   return { email, handle };
 }
 
-export class LocalAuthError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "LocalAuthError";
-  }
-}
-
 function makeRecoveryKey(): string {
   const raw = b64(randomBytes(18));
   return `RAGI-${raw.slice(0, 8)}-${raw.slice(8, 16)}-${raw.slice(16, 24)}`.toUpperCase();
@@ -285,12 +285,16 @@ export async function localLogin(input: {
   password: string;
 }): Promise<LocalSession> {
   const email = normalizeEmail(input.email);
+  const lockKey = `login:${email}`;
+  await assertNotLocked(lockKey);
   const account = await getByIndex("email", email);
   const salt = account?.passwordSalt ?? b64(randomBytes(16));
   const hash = await deriveHash(input.password, salt);
   if (!account || !(await timingSafeEqual(hash, account.passwordHash))) {
+    await registerAuthFail(lockKey);
     throw new LocalAuthError("Email or password is not right.");
   }
+  await clearAuthFails(lockKey);
   return issueSession(account);
 }
 
@@ -300,20 +304,30 @@ export async function localResetPassword(input: {
   newPassword: string;
 }): Promise<LocalSession> {
   const email = normalizeEmail(input.email);
+  const lockKey = `reset:${email}`;
+  await assertNotLocked(lockKey);
   if (input.newPassword.length < 12) throw new LocalAuthError("Use at least 12 characters.");
   const account = await getByIndex("email", email);
-  if (!account) throw new LocalAuthError("No account matches that email and recovery key.");
+  if (!account) {
+    await registerAuthFail(lockKey);
+    throw new LocalAuthError("No account matches that email and recovery key.");
+  }
   const ok = await timingSafeEqual(
     await deriveHash(input.recoveryKey.trim().toUpperCase(), account.recoverySalt),
     account.recoveryHash,
   );
-  if (!ok) throw new LocalAuthError("No account matches that email and recovery key.");
+  if (!ok) {
+    await registerAuthFail(lockKey);
+    throw new LocalAuthError("No account matches that email and recovery key.");
+  }
 
   const passwordSalt = b64(randomBytes(16));
   account.passwordSalt = passwordSalt;
   account.passwordHash = await deriveHash(input.newPassword, passwordSalt);
   account.updatedAt = new Date().toISOString();
   await putAccount(account);
+  await clearAuthFails(lockKey);
+  await clearAuthFails(`login:${email}`);
   return issueSession(account);
 }
 

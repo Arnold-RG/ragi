@@ -1,3 +1,4 @@
+import "./styles/arnova-base.css";
 import "./styles/premium.css";
 import "./styles/craft.css";
 import "./styles/anime-stage.css";

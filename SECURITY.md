@@ -18,7 +18,9 @@ We aim to acknowledge reports within 7 days and publish a fix or mitigation when
 
 ## Practice
 
-- No secrets in source; use `.env.example` only
-- Prefer `textContent` over `innerHTML` for untrusted data
+- No secrets in source; use `.env.example` only (`RAGI_MASTER_KEY`, `RAGI_SESSION_SECRET`, API keys stay off-repo)
+- Prefer `textContent` / `esc()` over `innerHTML` for untrusted data
 - External links use `rel="noopener noreferrer"`
+- Owner vaults: Argon2id / PBKDF2 password hashes, AES-GCM field seal, session revoke, auth rate limits + lockouts
+- Device Pages mode: IndexedDB accounts with PBKDF2 (310k) and local fail lockouts
 - Dependabot / Actions least privilege where applicable

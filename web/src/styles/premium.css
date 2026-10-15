@@ -1,4 +1,7 @@
 :root {
+  --arn-accent: #4fd0ff;
+  --arn-accent-2: #e8b86a;
+  --arn-hero-bg: #03050a;
   --void: #03050a;
   --void-2: #080e16;
   --panel: rgba(10, 16, 26, 0.55);
@@ -1445,6 +1448,21 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important
   .ask-cmd { grid-template-columns: 1fr; }
   .cmd { grid-template-columns: 1fr; }
   .bar-row { grid-template-columns: 4.5rem 1fr 2.2rem; }
+  .shell {
+    width: min(100% - 1rem, 1200px);
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+  .vault-cta,
+  .vault-link,
+  .primary,
+  .ghost,
+  button {
+    min-height: 44px;
+  }
+  .app-nav a,
+  .app-nav button {
+    min-height: 44px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

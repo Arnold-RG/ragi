@@ -2,9 +2,14 @@ node_modules/
 dist/
 build/
 .env
-.env.local
+.env.*
+!.env.example
+!.env*.example
 *.pem
 *.key
+*.p12
+credentials.json
+secrets/
 coverage/
 .DS_Store
 Thumbs.db
@@ -15,6 +20,7 @@ backend/data/
 backend/logs/
 backend/.env
 web/dist/
+web/.env
 .wrangler/
 .turbo/
 *.log
