@@ -1,4 +1,4 @@
-import { renderUnlock } from "./unlock";
+import { openWorkspaceSession } from "../api/auth";
 import { mountAnimeStage, type StageHandle } from "../motion/animeStage";
 
 function theaterMarkup(ctaId: string) {
@@ -9,7 +9,7 @@ function theaterMarkup(ctaId: string) {
           <img src="${import.meta.env.BASE_URL}logo.svg" width="32" height="32" alt="" />
           <strong>RAGI</strong>
         </div>
-        <button type="button" class="ajs-cta" id="${ctaId}">Enter vault</button>
+        <button type="button" class="ajs-cta" id="${ctaId}">Enter RAGI</button>
       </header>
 
       <section class="ajs-panel ajs-hero">
@@ -19,7 +19,7 @@ function theaterMarkup(ctaId: string) {
           <span data-ajs-word>to</span>
           <span data-ajs-word>synchronise</span>
         </h1>
-        <p class="ajs-lead">Live animation scrolling — the same Scroll Observer energy as Anime.js, tuned for your sealed vault.</p>
+        <p class="ajs-lead">Live animation scrolling — Scroll Observer energy tuned for your on-device secretary. No login required.</p>
         <div class="ajs-grid" data-ajs-grid aria-hidden="true"></div>
         <p class="ajs-hint">Scroll down · demos stay locked to your scroll position</p>
       </section>
@@ -93,16 +93,17 @@ function theaterMarkup(ctaId: string) {
         </div>
       </section>
 
-      <section class="ajs-panel ajs-finale" id="vaultLoginAnchor">
-        <h2>Enter your sealed vault</h2>
-        <p>Tasks, GitHub intel, money, schedule, notes — with the same motion language after you sign in.</p>
-        <div id="landingVaultHost"></div>
+      <section class="ajs-panel ajs-finale" id="enterRagiAnchor">
+        <h2>Open your secretary</h2>
+        <p>Tasks, GitHub intel, money, schedule, and notes — stored on this device. No account wall.</p>
+        <p class="msg" data-room-msg role="status"></p>
+        <button type="button" class="ajs-cta ajs-cta-lg" id="landingEnterBottom">Enter RAGI</button>
       </section>
     </div>
   `;
 }
 
-/** Pre-login Anime.js-style scroll site, with vault login at the end. */
+/** Pre-entry Anime.js-style scroll site. No login vault. */
 export function renderLanding(root: HTMLElement, onUnlocked: () => void): () => void {
   root.classList.add("is-landing");
   document.body.classList.add("is-landing");
@@ -110,18 +111,26 @@ export function renderLanding(root: HTMLElement, onUnlocked: () => void): () => 
 
   const page = root.querySelector("#ajsRoot") as HTMLElement;
   let stage: StageHandle | null = mountAnimeStage(page);
+  let busy = false;
 
-  const host = root.querySelector("#landingVaultHost") as HTMLElement;
-  renderUnlock(host, () => {
-    document.body.classList.remove("is-landing");
-    root.classList.remove("is-landing");
-    onUnlocked();
-  });
-
-  const goLogin = () => {
-    document.getElementById("vaultLoginAnchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const enter = async () => {
+    if (busy) return;
+    busy = true;
+    const msg = root.querySelector("[data-room-msg]") as HTMLElement | null;
+    if (msg) msg.textContent = "Opening workspace…";
+    try {
+      await openWorkspaceSession();
+      document.body.classList.remove("is-landing");
+      root.classList.remove("is-landing");
+      onUnlocked();
+    } catch (err) {
+      if (msg) msg.textContent = err instanceof Error ? err.message : "Could not open workspace.";
+      busy = false;
+    }
   };
-  root.querySelector("#landingEnterTop")?.addEventListener("click", goLogin);
+
+  root.querySelector("#landingEnterTop")?.addEventListener("click", () => void enter());
+  root.querySelector("#landingEnterBottom")?.addEventListener("click", () => void enter());
 
   return () => {
     stage?.dispose();

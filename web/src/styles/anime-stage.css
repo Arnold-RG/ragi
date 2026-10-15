@@ -6,8 +6,8 @@ body.is-landing.is-gate {
   overflow-y: auto !important;
   height: auto !important;
   min-height: 100%;
-  background: #070a09;
-  color: #e8eee9;
+  background: #0c0614;
+  color: #f5eefb;
 }
 
 body.is-landing .scene-host,
@@ -49,11 +49,11 @@ body.is-landing .view.is-on {
 }
 
 .ajs-page {
-  --ajs-ink: #eef3f0;
-  --ajs-mute: #8a9a92;
-  --ajs-line: #24322c;
-  --ajs-accent: #5ee0a0;
-  --ajs-panel: #0c1210;
+  --ajs-ink: #f5eefb;
+  --ajs-mute: #b8a0c8;
+  --ajs-line: #3b2454;
+  --ajs-accent: #c084fc;
+  --ajs-panel: #160a22;
   color: var(--ajs-ink);
   background:
     radial-gradient(ellipse 70% 40% at 50% 0%, rgba(94, 224, 160, 0.12), transparent 55%),
@@ -88,9 +88,15 @@ body.is-landing .view.is-on {
   border-radius: 999px;
   padding: 0.55rem 1.1rem;
   background: var(--ajs-accent);
-  color: #06110c;
+  color: #1a0628;
   font-weight: 700;
   cursor: pointer;
+}
+
+.ajs-cta-lg {
+  padding: 0.9rem 1.6rem;
+  font-size: 1.05rem;
+  justify-self: start;
 }
 
 .ajs-panel {

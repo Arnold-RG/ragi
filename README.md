@@ -1,18 +1,18 @@
 # RAGI
 
-A private secretary. **Public house. Private vaults.**
+A private secretary. **No login wall on the public site** — press Enter RAGI and the on-device workspace opens.
 
-Anyone may create an account. Notes, money, projects, and snapshots stay on that account, encrypted, and are not readable by anyone else. The owner's account is an account like any other: no shared back door.
+Notes, money, projects, and GitHub intel stay on the visitor’s device (IndexedDB). An optional durable API remains in [`backend/`](./backend/) for self-hosted seals.
 
 Live chamber: https://arnold-rg.github.io/ragi/
 
-- **Web:** [`web/`](./web/) — Vite + Three.js cinematic vault · Pages at `/ragi/`
-- **Rooms:** Vault · Hall · **Home** · Forge · Gold · Clock · **Hub (GitHub %)** · Map · Den
+- **Web:** [`web/`](./web/) — Vite + Three.js cinematic desk · Pages at `/ragi/`
+- **Rooms:** Welcome · Hall · **Home** · Forge · Gold · Clock · **Hub (GitHub %)** · Map · Den
 - **Backend:** [`backend/`](./backend/) — see [`backend/ARCHITECTURE.md`](./backend/ARCHITECTURE.md)
 - **Stack:** [`docker-compose.yml`](./docker-compose.yml) — Postgres · Redis · API · optional nginx web
 - **Route map:** [`web/api.md`](./web/api.md)
 
-CAST uses Gemini when `GEMINI_API_KEY` is set; otherwise the **local vault secretary** answers from your real projects, finance, meetings, and goals (no more dead signal).
+CAST uses Gemini when `GEMINI_API_KEY` is set; otherwise the **local secretary** answers from real projects, finance, meetings, and goals.
 
 ### Durable vault storage
 

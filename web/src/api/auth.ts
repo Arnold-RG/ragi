@@ -6,6 +6,7 @@ import {
   localLogin,
   localLogout,
   localMe,
+  localOpenWorkspace,
   localRegister,
   localResetPassword,
   LocalAuthError,
@@ -25,6 +26,24 @@ export type AuthSession = {
 function asAuthError(err: unknown): Error {
   if (err instanceof LocalAuthError) return err;
   return err instanceof Error ? err : new Error("The vault could not open.");
+}
+
+/** Open the on-device workspace with no login form. */
+export async function openWorkspaceSession(): Promise<AuthSession> {
+  const res = await localOpenWorkspace();
+  const session: AuthSession = {
+    ok: true,
+    token: res.token,
+    expiresAt: res.expiresAt,
+    handle: res.handle,
+    mode: "local",
+  };
+  setToken(session.token, session.expiresAt, {
+    handle: session.handle,
+    email: res.email,
+    mode: "local",
+  });
+  return session;
 }
 
 export function startChallenge() {

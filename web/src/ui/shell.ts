@@ -17,7 +17,7 @@ export type Room =
 const LOCKED: Room[] = ["hall", "home", "forge", "gold", "clock", "pulse", "stage", "hub", "map", "den"];
 
 const TITLES: Record<Room, string> = {
-  vault: "Sign in",
+  vault: "Welcome",
   hall: "Ask RAGI",
   home: "Today",
   forge: "Work",
@@ -28,7 +28,7 @@ const TITLES: Record<Room, string> = {
   hub: "GitHub",
   map: "Progress",
   den: "Notes",
-  void: "Sign out space",
+  void: "Leave space",
 };
 
 const NAV: Array<{ room: Room; label: string; hint: string }> = [
@@ -75,8 +75,8 @@ export function renderShell(root: HTMLElement) {
             <span class="api-origin"></span>
           </span>
         </p>
-        <p class="member-line" id="hpLine">Signed out</p>
-        <button type="button" id="signOutBtn" class="ghost" hidden>Sign out</button>
+        <p class="member-line" id="hpLine">Ready</p>
+        <button type="button" id="signOutBtn" class="ghost" hidden>Leave</button>
       </div>
     </header>
 
@@ -99,36 +99,22 @@ export function renderShell(root: HTMLElement) {
         <section id="roomDen" class="view" aria-label="Notes">
           <header class="page-head">
             <h2 class="page-title" tabindex="-1">Notes</h2>
-            <p class="page-sub">Ideas, people, and follow-ups — kept private to your account.</p>
+            <p class="page-sub">Ideas, people, and follow-ups — kept on this device.</p>
           </header>
           <p class="msg" data-room-msg role="status"></p>
           <div class="board">
-            <div class="two-col">
-              <section class="board-section" style="border-top:0;padding-top:0">
-                <div class="board-section-head">
-                  <h3>Your notes</h3>
-                  <p>Write freely</p>
-                </div>
-                <ul class="jobs" id="noteList"><li class="entry is-empty"><p class="entry-title">Sign in to read your notes.</p></li></ul>
-                <form class="stack" id="noteForm" style="margin-top:1rem">
-                  <label class="field"><span>Title</span><input id="noteTitle" name="title" autocomplete="off" maxlength="160" /></label>
-                  <label class="field"><span>Note</span><textarea id="noteBody" name="body" maxlength="8000" rows="5"></textarea></label>
-                  <button type="submit" id="noteAdd" class="primary">Save note</button>
-                </form>
-              </section>
-              <section class="board-section" style="border-top:0;padding-top:0">
-                <div class="board-section-head">
-                  <h3>Account</h3>
-                  <p>Password only</p>
-                </div>
-                <form class="stack" id="passwordForm">
-                  <label class="field"><span>Current password</span><input id="pwCurrent" type="password" autocomplete="current-password" required minlength="1" maxlength="128" /></label>
-                  <label class="field"><span>New password</span><input id="pwNew" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
-                  <label class="field"><span>Confirm new password</span><input id="pwNew2" type="password" autocomplete="new-password" required minlength="12" maxlength="128" /></label>
-                  <button type="submit" class="primary">Update password</button>
-                </form>
-              </section>
-            </div>
+            <section class="board-section" style="border-top:0;padding-top:0">
+              <div class="board-section-head">
+                <h3>Your notes</h3>
+                <p>Write freely — no login wall</p>
+              </div>
+              <ul class="jobs" id="noteList"><li class="entry is-empty"><p class="entry-title">No notes yet — write one below.</p></li></ul>
+              <form class="stack" id="noteForm" style="margin-top:1rem">
+                <label class="field"><span>Title</span><input id="noteTitle" name="title" autocomplete="off" maxlength="160" /></label>
+                <label class="field"><span>Note</span><textarea id="noteBody" name="body" maxlength="8000" rows="5"></textarea></label>
+                <button type="submit" id="noteAdd" class="primary">Save note</button>
+              </form>
+            </section>
           </div>
         </section>
         <section class="dead-end" id="voidMsg" hidden></section>
@@ -186,7 +172,7 @@ export function setApiPill(el: HTMLElement, ok: boolean) {
   const reachable = pageCanReachApi();
   if (!reachable) {
     if (state) state.textContent = "On this device";
-    if (origin) origin.textContent = "Local vault active";
+    if (origin) origin.textContent = "On-device workspace";
     el.classList.remove("bad");
     el.classList.add("ok");
     return;

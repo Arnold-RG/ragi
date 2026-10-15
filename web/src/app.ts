@@ -1,5 +1,5 @@
 import { pingHealth } from "./api/client";
-import { changePassword, logout, me } from "./api/auth";
+import { logout, me } from "./api/auth";
 import { createNote, listNotes } from "./api/secretary";
 import { isUnlocked, clearSession, getSessionMeta } from "./state/session";
 import { goRoom, lockNav, renderShell, setApiPill, setGateMode, unlockNav, type Room } from "./ui/shell";
@@ -144,25 +144,6 @@ export async function startApp(root: HTMLElement) {
     });
   });
 
-  shell.den.querySelector("#passwordForm")?.addEventListener("submit", (event) => {
-    event.preventDefault();
-    if (!unlocked) return;
-    const currentPassword = (shell.den.querySelector("#pwCurrent") as HTMLInputElement).value;
-    const newPassword = (shell.den.querySelector("#pwNew") as HTMLInputElement).value;
-    const confirm = (shell.den.querySelector("#pwNew2") as HTMLInputElement).value;
-    if (newPassword !== confirm) {
-      say(shell.den, "The two new passwords do not match.", "bad");
-      return;
-    }
-    void guard(shell.den, async () => {
-      await changePassword({ currentPassword, newPassword });
-      (shell.den.querySelector("#pwCurrent") as HTMLInputElement).value = "";
-      (shell.den.querySelector("#pwNew") as HTMLInputElement).value = "";
-      (shell.den.querySelector("#pwNew2") as HTMLInputElement).value = "";
-      say(shell.den, "Password updated.", "good");
-    });
-  });
-
   async function paintRoom(room: Room) {
     if (!unlocked) return;
     disposePulse?.();
@@ -220,7 +201,7 @@ export async function startApp(root: HTMLElement) {
     clearSession();
     unlocked = false;
     lockNav(shell);
-    shell.hpLine.textContent = "Signed out";
+    shell.hpLine.textContent = "Ready";
     bootVault();
     goRoom("vault", shell, false);
   }
@@ -237,7 +218,7 @@ export async function startApp(root: HTMLElement) {
       unlocked = false;
       disposeChamber = null;
       lockNav(shell);
-      shell.hpLine.textContent = "Signed out";
+      shell.hpLine.textContent = "Ready";
       bootVault();
       goRoom("vault", shell, false);
     });
@@ -248,7 +229,7 @@ export async function startApp(root: HTMLElement) {
       shell.hpLine.textContent = profile.handle;
     } catch {
       const meta = getSessionMeta();
-      shell.hpLine.textContent = meta?.handle ?? "Signed in";
+      shell.hpLine.textContent = meta?.handle ?? "Workspace";
     }
   }
 
@@ -285,7 +266,7 @@ export async function startApp(root: HTMLElement) {
     btn.addEventListener("click", () => {
       const room = btn.dataset.room as Room;
       if (!unlocked) {
-        say(shell.vault, "Sign in first.", "bad");
+        say(shell.vault, "Enter RAGI first.", "bad");
         goRoom("vault", shell, unlocked);
         return;
       }

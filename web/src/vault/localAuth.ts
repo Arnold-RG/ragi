@@ -377,3 +377,29 @@ export async function localMe(token: string): Promise<{ handle: string; email: s
   if (!session) throw new LocalAuthError("Session expired. Sign in again.");
   return { handle: session.handle, email: session.email, mode: "work" };
 }
+
+/** Open (or reuse) a device-local workspace with no password / login UI. */
+export async function localOpenWorkspace(): Promise<LocalSession> {
+  const email = "workspace@local.ragi";
+  const handle = "workspace";
+  let account = await getByIndex("email", email);
+  if (!account) {
+    const passwordSalt = b64(randomBytes(16));
+    const recoverySalt = b64(randomBytes(16));
+    const now = new Date().toISOString();
+    const randomPass = b64(randomBytes(24));
+    account = {
+      id: `acc_${b64(randomBytes(12))}`,
+      email,
+      handle,
+      passwordSalt,
+      passwordHash: await deriveHash(randomPass, passwordSalt),
+      recoverySalt,
+      recoveryHash: await deriveHash(makeRecoveryKey(), recoverySalt),
+      createdAt: now,
+      updatedAt: now,
+    };
+    await putAccount(account);
+  }
+  return issueSession(account);
+}
