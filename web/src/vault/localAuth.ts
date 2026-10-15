@@ -8,7 +8,10 @@ const DB_NAME = "ragi-vault";
 const DB_VERSION = 1;
 const STORE = "accounts";
 const SESS = "sessions";
+const LOCKS = "locks";
 const ITERATIONS = 310_000;
+const MAX_FAILS = 5;
+const LOCK_MS = 15 * 60 * 1000;
 
 export type LocalSession = {
   token: string;
@@ -64,6 +67,9 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(SESS)) {
         db.createObjectStore(SESS, { keyPath: "token" });
       }
+      if (!db.objectStoreNames.contains(LOCKS)) {
+        db.createObjectStore(LOCKS, { keyPath: "key" });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error("vault_open_failed"));
@@ -105,6 +111,43 @@ async function getSession(token: string): Promise<LocalSession | undefined> {
 async function deleteSession(token: string): Promise<void> {
   const db = await openDb();
   await idbReq(db.transaction(SESS, "readwrite").objectStore(SESS).delete(token));
+}
+
+type LockRow = { key: string; fails: number; lockedUntil: number };
+
+async function readLock(key: string): Promise<LockRow> {
+  const db = await openDb();
+  const row = await idbReq<LockRow | undefined>(
+    db.transaction(LOCKS, "readonly").objectStore(LOCKS).get(key),
+  );
+  return row ?? { key, fails: 0, lockedUntil: 0 };
+}
+
+async function writeLock(row: LockRow): Promise<void> {
+  const db = await openDb();
+  await idbReq(db.transaction(LOCKS, "readwrite").objectStore(LOCKS).put(row));
+}
+
+async function assertNotLocked(key: string): Promise<void> {
+  const row = await readLock(key);
+  if (row.lockedUntil > Date.now()) {
+    const mins = Math.max(1, Math.ceil((row.lockedUntil - Date.now()) / 60_000));
+    throw new LocalAuthError(`Too many attempts. Wait about ${mins} minute${mins === 1 ? "" : "s"}.`);
+  }
+}
+
+async function registerAuthFail(key: string): Promise<void> {
+  const row = await readLock(key);
+  row.fails += 1;
+  if (row.fails >= MAX_FAILS) {
+    row.lockedUntil = Date.now() + LOCK_MS;
+    row.fails = 0;
+  }
+  await writeLock(row);
+}
+
+async function clearAuthFails(key: string): Promise<void> {
+  await writeLock({ key, fails: 0, lockedUntil: 0 });
 }
 
 async function deriveHash(secret: string, saltB64: string): Promise<string> {
