@@ -66,15 +66,30 @@ Create an account in the vault. You do not need the seed script for a normal acc
 
 CORS allows local Vite (`4173`) and `https://arnold-rg.github.io`.
 
-## Publish
+## Publish (public live link)
 
-The chamber is deployed from [`.github/workflows/pages.yml`](./.github/workflows/pages.yml) to GitHub Pages on every push to `main` that touches `web/`.
+Live chamber: **https://arnold-rg.github.io/ragi/**
 
-1. In the repository, open **Settings → Pages → Build and deployment** and choose **GitHub Actions**. The workflow also asks to enable Pages itself. If the run still reports that Pages is missing, that settings switch is the one that has to be flipped by hand.
-2. Host the API somewhere reachable over HTTPS (the Docker stack, or any Node host). Generate `RAGI_MASTER_KEY` and `RAGI_SESSION_SECRET` on that host. Do not commit them.
-3. Set `RAGI_WEB_ORIGIN` so it includes `https://arnold-rg.github.io`.
-4. In the repository, add a variable `VITE_API_ORIGIN` with the public API origin, for example `https://api.example.com`. Re-run the Pages workflow. Vite bakes that origin into the static build.
-5. The live URL is https://arnold-rg.github.io/ragi/
+The static chamber is built from [`web/`](./web/) by [`.github/workflows/pages.yml`](./.github/workflows/pages.yml) on every push to `main` that touches `web/`. The workflow also refreshes the [`gh-pages`](https://github.com/Arnold-RG/ragi/tree/gh-pages) branch with the built site.
+
+### One-time GitHub Pages enable (required)
+
+A repo admin must flip this once (the Actions token cannot create the Pages site by itself):
+
+1. Open **Settings → Pages → Build and deployment**.
+2. Prefer **Source: Deploy from a branch**, branch **`gh-pages`**, folder **`/ (root)`**, then **Save**.
+   - Or choose **Source: GitHub Actions** if you want the Actions Pages environment instead.
+3. Wait about a minute, then open https://arnold-rg.github.io/ragi/
+
+Optional: under **About** on the repo, set the website URL to that link.
+
+### Wire the vault API (optional)
+
+Until an API is hosted, the public page still opens; sign-up/sign-in will say the vault link is down.
+
+1. Host the API over HTTPS (Docker stack or any Node host). Generate `RAGI_MASTER_KEY` and `RAGI_SESSION_SECRET` there — do not commit them.
+2. Set `RAGI_WEB_ORIGIN` so it includes `https://arnold-rg.github.io`.
+3. In the repository, add variable `VITE_API_ORIGIN` with the public API origin (e.g. `https://api.example.com`). Re-run the Pages workflow.
 
 `robots.txt` and `sitemap.xml` ship with the Pages build under `/ragi/`. GitHub serves a project site on that path, not at the domain root.
 

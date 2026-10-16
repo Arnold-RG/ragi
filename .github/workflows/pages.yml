@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -18,10 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,11 +35,48 @@ jobs:
         run: |
           npm ci
           npm run build
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
+          touch dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist
+      - name: Upload dist for gh-pages branch
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 2
+
+  # Always refresh the gh-pages branch (no Pages admin API needed).
+  # After one Settings flip (Pages → Deploy from branch → gh-pages),
+  # https://arnold-rg.github.io/ragi/ stays live on every main push.
+  publish-branch:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+      - name: Publish gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
+          commit_message: "Publish RAGI chamber"
+
+  # Official Actions Pages deploy (works once Pages source is GitHub Actions).
+  deploy-pages:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - id: deployment
         uses: actions/deploy-pages@v4
