@@ -23,11 +23,22 @@ export async function dbReady(): Promise<boolean> {
 
 const readyProbeRollback = new Error("ready-probe-rollback");
 
-/** Prove the vault file accepts writes, then roll the probe back. */
+/**
+ * Write the current SQLite user_version inside a transaction and roll it back.
+ * Assigning user_version updates the database header, so a read-only directory
+ * fails with SQLITE_READONLY_DIRECTORY instead of a no-op update.
+ */
 export async function dbWritable(): Promise<void> {
+  const currentRows = await db.$queryRaw<Array<{ user_version: number | bigint }>>`
+    PRAGMA user_version
+  `;
+  const current = Number(currentRows[0]?.user_version ?? 0);
+  if (!Number.isInteger(current)) {
+    throw new Error("SQLite user_version was not an integer.");
+  }
   try {
     await db.$transaction(async (tx) => {
-      await tx.$executeRaw`UPDATE "Owner" SET "handle" = "handle" WHERE 0`;
+      await tx.$executeRawUnsafe(`PRAGMA user_version = ${current}`);
       throw readyProbeRollback;
     });
   } catch (err) {

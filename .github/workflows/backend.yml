@@ -36,3 +36,9 @@ jobs:
           RAGI_SESSION_SECRET: ci-session-secret-0123456789abcdef
           NODE_ENV: test
         run: npm run smoke:accounts
+      - name: Ready write probe
+        env:
+          RAGI_MASTER_KEY: ci-master-key-0123456789abcdef-extra
+          RAGI_SESSION_SECRET: ci-session-secret-0123456789abcdef
+          NODE_ENV: test
+        run: npm test

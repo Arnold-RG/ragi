@@ -11,7 +11,7 @@ db=$data/ragi.db
 backups=$data/backups
 
 deny() {
-  echo "run: docker compose run --rm -u root api chown -R node:node /var/ragi/data"
+  echo "run: docker compose run --rm -u root api chown -R node:node /var/ragi/data" >&2
   exit 1
 }
 
