@@ -1,0 +1,44 @@
+name: Backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Build
+        run: npm run build
+      - name: Push schema to a temp SQLite file
+        env:
+          DATABASE_URL: file:/tmp/ragi-ci.db
+        run: npx prisma db push
+      - name: Smoke accounts
+        env:
+          DATABASE_URL: file:/tmp/ragi-ci.db
+          RAGI_MASTER_KEY: ci-master-key-0123456789abcdef-extra
+          RAGI_SESSION_SECRET: ci-session-secret-0123456789abcdef
+          NODE_ENV: test
+        run: npm run smoke:accounts
+      - name: Ready write probe
+        env:
+          RAGI_MASTER_KEY: ci-master-key-0123456789abcdef-extra
+          RAGI_SESSION_SECRET: ci-session-secret-0123456789abcdef
+          NODE_ENV: test
+        run: npm test

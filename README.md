@@ -9,14 +9,14 @@ Live chamber: https://arnold-rg.github.io/ragi/
 - **Web:** [`web/`](./web/) — Vite + Three.js cinematic desk · Pages at `/ragi/`
 - **Rooms:** Welcome · Hall · **Home** · Forge · Gold · Clock · **Hub (GitHub %)** · Map · Den
 - **Backend:** [`backend/`](./backend/) — see [`backend/ARCHITECTURE.md`](./backend/ARCHITECTURE.md)
-- **Stack:** [`docker-compose.yml`](./docker-compose.yml) — Postgres · Redis · API · optional nginx web
+- **Stack:** [`docker-compose.yml`](./docker-compose.yml) — SQLite on the vault volume · Redis · API · optional nginx web
 - **Route map:** [`web/api.md`](./web/api.md)
 
 CAST uses Gemini when `GEMINI_API_KEY` is set; otherwise the **local secretary** answers from real projects, finance, meetings, and goals.
 
 ### Durable vault storage
 
-- Live data: SQLite at `backend/prisma/data/ragi.db` (or Postgres volume in Docker)
+- Live data: SQLite at `backend/prisma/data/ragi.db`, or `file:/var/ragi/data/ragi.db` on the `ragi_vault` volume in Docker
 - Memory snapshots: append-only JSON + DB copies under `backend/prisma/data/backups/`
 - Every write schedules a snapshot; **E-77 DEN** can seal, export, and merge-restore
 - `npm run reseed` is blocked unless `RAGI_ALLOW_WIPE=YES` — code changes never erase vault data
@@ -28,8 +28,10 @@ CAST uses Gemini when `GEMINI_API_KEY` is set; otherwise the **local secretary**
 
 ### Database
 
-- Local: SQLite at `backend/prisma/data/ragi.db`
-- Production: PostgreSQL via Docker
+- Node.js **22.12+** (or 24+). The repo `.nvmrc` is `22`.
+- Prisma ORM 7 reads the connection from [`backend/prisma.config.ts`](./backend/prisma.config.ts). The models stay in `backend/prisma/schema.prisma`.
+- Local: SQLite at `backend/prisma/data/ragi.db` (`DATABASE_URL="file:./data/ragi.db"`)
+- Docker: SQLite at `file:/var/ragi/data/ragi.db` on the `ragi_vault` volume
 
 ## Security model
 
@@ -81,7 +83,7 @@ The chamber is deployed from [`.github/workflows/pages.yml`](./.github/workflows
 ## 32GB host
 
 Node starts with `--max-old-space-size=28672` in Docker / `npm run start`.  
-Postgres `shared_buffers=4GB`, Redis `maxmemory 4gb`. Memory is **capacity**, not pre-allocated waste.
+Redis `maxmemory 4gb`. Memory is **capacity**, not pre-allocated waste.
 
 ## Credits
 
