@@ -15,7 +15,7 @@ export const systemRoutes: FastifyPluginAsync = async (app) => {
     database: {
       engine: "prisma",
       local: "sqlite (prisma/data/ragi.db)",
-      production: "postgresql via docker-compose",
+      production: "sqlite file on the ragi_vault volume (/var/ragi/data/ragi.db)",
     },
     security: [
       "email and password accounts",

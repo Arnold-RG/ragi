@@ -5,7 +5,7 @@
   "description": "RAGI owner-only private secretary API — high-memory secure backend",
   "type": "module",
   "engines": {
-    "node": "^20.19 || ^22.12 || >=24.0"
+    "node": "^22.12 || >=24"
   },
   "scripts": {
     "dev": "node --import tsx src/server.ts",

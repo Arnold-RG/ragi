@@ -5,10 +5,12 @@
 | Environment | Engine | Location |
 |-------------|--------|----------|
 | Local / seed | **SQLite** | `backend/prisma/data/ragi.db` |
-| Production (Docker) | **PostgreSQL 16** | `docker-compose.yml` service `postgres` |
+| Production (Docker) | **SQLite** | `file:/var/ragi/data/ragi.db` on the `ragi_vault` volume |
 | Hot cache | Redis 7 (optional) or in-process memory | `REDIS_URL` |
 
+Runtime is **Node.js 22.12+** (or 24+). `.nvmrc` pins 22.  
 Prisma schema: `prisma/schema.prisma`  
+Prisma CLI connection: `prisma.config.ts` (Prisma ORM 7 does not read `url` from the schema)  
 Sensitive fields (notes, jobs, OAuth, briefing cache, audit details) are **AES-256-GCM** encrypted with a per-owner vault salt.
 
 ## Layer map
@@ -52,7 +54,8 @@ src/
 
 - Node heap target: `RAGI_HEAP_MB=28672`  
 - Cache budget: `RAGI_CACHE_BUDGET_MB=4096`  
-- Postgres / Redis tuned in `docker-compose.yml`  
+- Redis tuned in `docker-compose.yml`  
+- Docker SQLite file lives on `ragi_vault` (`/var/ragi/data`)  
 Memory is **allocated on demand**, not pre-filled.
 
 ## Recommended next additions
