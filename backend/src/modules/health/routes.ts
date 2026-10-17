@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { dbReady } from "../../shared/db.js";
+import { db, dbReady } from "../../shared/db.js";
 import { cacheStats } from "../../shared/redis.js";
 import { runtimeReport } from "../../shared/memory.js";
 import { env } from "../../shared/config.js";
@@ -30,7 +30,7 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/ready", async (_req, reply) => {
     try {
-      await dbReady();
+      await db.owner.count();
       return { ready: true };
     } catch {
       return reply.code(503).send({ ready: false });
