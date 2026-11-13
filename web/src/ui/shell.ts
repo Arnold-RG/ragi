@@ -122,7 +122,7 @@ export function renderShell(root: HTMLElement) {
     </div>
 
     <footer class="colophon app-foot">
-      <p>Arnova Group</p>
+      <p>Vira</p>
       <p>Your private secretary</p>
     </footer>
   `;
