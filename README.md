@@ -1,5 +1,9 @@
 # RAGI
 
+[![Live demo](https://img.shields.io/badge/Live_demo-GitHub_Pages-2ea44f?style=for-the-badge&logo=github)](https://arnold-rg.github.io/ragi/)
+
+[![RAGI](docs/screenshot.jpg)](https://arnold-rg.github.io/ragi/)
+
 A private secretary. **No login wall on the public site** — press Enter RAGI and the on-device workspace opens.
 
 Notes, money, projects, and GitHub intel stay on the visitor’s device (IndexedDB). An optional durable API remains in [`backend/`](./backend/) for self-hosted seals.
@@ -85,8 +89,12 @@ Postgres `shared_buffers=4GB`, Redis `maxmemory 4gb`. Memory is **capacity**, no
 
 ## Credits
 
-Arnova Group · Arnold-RG
+Arnold Rurangwa
 
 ## License
 
 Private product logic with a public repository shell. Do not commit `.env`, keys, or personal exports.
+
+## Author
+
+Arnold Rurangwa
