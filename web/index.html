@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>RAGI — Private Secretary</title>
+    <meta
+      name="description"
+      content="RAGI is an owner-sealed private secretary — cinematic 3D vault for work, money, time, and notes."
+    />
+    <meta name="theme-color" content="#070a09" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; worker-src 'self' blob:; base-uri 'self'; form-action 'self'"
+    />
+    <link rel="canonical" href="https://arnold-rg.github.io/ragi/" />
+    <link rel="icon" href="%BASE_URL%favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" type="application/xml" href="%BASE_URL%sitemap.xml" />
+    <meta property="og:title" content="RAGI — Private Secretary" />
+    <meta
+      property="og:description"
+      content="Cinematic 3D vault for your sealed work, money, time, and notes."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://arnold-rg.github.io/ragi/" />
+    <meta property="og:image" content="https://arnold-rg.github.io/ragi/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RAGI — Private Secretary" />
+    <meta name="twitter:image" content="https://arnold-rg.github.io/ragi/og.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,650;9..144,700&family=Outfit:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="is-gate">
+    <noscript>
+      <p style="font-family: system-ui; padding: 2rem; color: #e8f1f8; background: #03050a">
+        RAGI needs JavaScript to open the vault.
+      </p>
+    </noscript>
+    <div id="scene-host" class="scene-host" aria-hidden="true"></div>
+    <div class="atmosphere" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <div id="app" class="shell is-gate"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

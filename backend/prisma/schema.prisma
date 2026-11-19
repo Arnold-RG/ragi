@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// One row per member. Vault rows hang off this id and never cross accounts.
+model Owner {
+  id                String   @id @default(cuid())
+  email             String?  @unique
+  passwordHash      String?
+  recoveryHash      String?
+  githubLogin       String?
+  handle            String   @unique
+  passphraseHash    String?
+  backupCodeHash    String?
+  deviceKeyHash     String?
+  totpSecretEnc     String?
+  totpVerified      Boolean  @default(false)
+  webauthnEnabled   Boolean  @default(false)
+  vaultSalt         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  credentials       WebAuthnCredential[]
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  notes             SecureNote[]
+  jobs              JobEntry[]
+  focusBlocks       FocusBlock[]
+  modeState         ModeState?
+  oauthTokens       OAuthToken[]
+  briefingCache     BriefingCache?
+  projects          Project[]
+  goals             Goal[]
+  activities        Activity[]
+  financeEntries    FinanceEntry[]
+  meetings          Meeting[]
+  reminders         Reminder[]
+  emergencies       Emergency[]
+  githubTracks      GithubRepoTrack[]
+}
+
+model WebAuthnCredential {
+  id              String   @id @default(cuid())
+  ownerId         String
+  credentialId    String   @unique
+  publicKey       String
+  counter         BigInt   @default(0)
+  transports      String   @default("[]")
+  deviceType      String   @default("unknown")
+  backedUp        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  lastUsedAt      DateTime?
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id              String   @id @default(cuid())
+  ownerId         String
+  tokenHash       String   @unique
+  gatesPassed     String   @default("[]")
+  ip              String?
+  userAgent       String?
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, expiresAt])
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  ownerId         String?
+  action          String
+  outcome         String
+  detailEnc       String?
+  ip              String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  owner           Owner?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action, outcome])
+}
+
+model SecureNote {
+  id              String   @id @default(cuid())
+  ownerId         String
+  kind            String   @default("note")
+  titleEnc        String
+  bodyEnc         String
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, kind])
+  @@index([ownerId, archived])
+}
+
+model JobEntry {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  companyEnc      String?
+  status          String   @default("watch")
+  urlEnc          String?
+  notesEnc        String?
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, status])
+  @@index([ownerId, archived])
+}
+
+model FocusBlock {
+  id              String   @id @default(cuid())
+  ownerId         String
+  labelEnc        String
+  startsAt        DateTime
+  endsAt          DateTime
+  completed       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, startsAt])
+}
+
+model ModeState {
+  id              String   @id @default(cuid())
+  ownerId         String   @unique
+  mode            String   @default("work")
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model OAuthToken {
+  id              String   @id @default(cuid())
+  ownerId         String
+  provider        String
+  accessEnc       String
+  refreshEnc      String?
+  expiresAt       DateTime?
+  scope           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, provider])
+}
+
+model BriefingCache {
+  id              String   @id @default(cuid())
+  ownerId         String   @unique
+  payloadEnc      String
+  generatedAt     DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model AuthChallenge {
+  id              String   @id @default(cuid())
+  kind            String
+  payloadEnc      String
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([kind, expiresAt])
+}
+
+model SystemMeta {
+  key             String   @id
+  value           String
+  updatedAt       DateTime @updatedAt
+}
+
+model Project {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  notesEnc        String?
+  realm           String   @default("personal")
+  status          String   @default("active")
+  progress        Int      @default(0)
+  dueAt           DateTime?
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, realm, status])
+  @@index([ownerId, archived])
+}
+
+model Goal {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  realm           String   @default("personal")
+  status          String   @default("active")
+  progress        Int      @default(0)
+  targetEnc       String?
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, status])
+  @@index([ownerId, archived])
+}
+
+model Activity {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  kind            String   @default("task")
+  day             DateTime
+  done            Boolean  @default(false)
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, day])
+  @@index([ownerId, archived])
+}
+
+model FinanceEntry {
+  id              String   @id @default(cuid())
+  ownerId         String
+  kind            String
+  amountCents     Int
+  labelEnc        String
+  categoryEnc     String?
+  at              DateTime @default(now())
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, at])
+  @@index([ownerId, kind])
+  @@index([ownerId, archived])
+}
+
+model Meeting {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  placeEnc        String?
+  startsAt        DateTime
+  endsAt          DateTime
+  status          String   @default("scheduled")
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, startsAt])
+  @@index([ownerId, archived])
+}
+
+model Reminder {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  dueAt           DateTime
+  priority        String   @default("normal")
+  done            Boolean  @default(false)
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, dueAt, done])
+  @@index([ownerId, archived])
+}
+
+model Emergency {
+  id              String   @id @default(cuid())
+  ownerId         String
+  titleEnc        String
+  bodyEnc         String
+  severity        String   @default("high")
+  active          Boolean  @default(true)
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, active])
+  @@index([ownerId, archived])
+}
+
+/// Owner-tuned completion % for GitHub repos (live API + durable overrides).
+model GithubRepoTrack {
+  id              String   @id @default(cuid())
+  ownerId         String
+  fullName        String
+  progress        Int      @default(0)
+  notesEnc        String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  owner           Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, fullName])
+  @@index([ownerId])
+}
