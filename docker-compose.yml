@@ -7,10 +7,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ragi
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ragi_change_me}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a unique strong POSTGRES_PASSWORD in the root environment}
       POSTGRES_DB: ragi
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - ragi_pg:/var/lib/postgresql/data
     command:
@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--maxmemory", "4gb", "--maxmemory-policy", "allkeys-lru", "--save", "60", "1000"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - ragi_redis:/data
     healthcheck:
@@ -58,7 +58,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      DATABASE_URL: postgresql://ragi:${POSTGRES_PASSWORD:-ragi_change_me}@postgres:5432/ragi?schema=public
+      DATABASE_URL: postgresql://ragi:${POSTGRES_PASSWORD:?Set a unique strong POSTGRES_PASSWORD in the root environment}@postgres:5432/ragi?schema=public
       REDIS_URL: redis://redis:6379
       RAGI_DATA_DIR: /var/ragi/data
       RAGI_HEAP_MB: "28672"
