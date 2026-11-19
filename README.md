@@ -64,13 +64,6 @@ Use secrets management, least privilege, deployment environment isolation, depen
 
 These are **release criteria**, not claims that every control is currently enabled. Kubernetes should only be used when the actual runtime complexity justifies it.
 
-## Roadmap
-
-1. Remove unsafe Compose defaults; run deployment configuration scanners.
-2. Validate production authentication and database migrations on test fixtures.
-3. Add API security tests, build pipeline and observability.
-4. Document safe backup/restore, disaster recovery and resource sizing.
-
 ## Contributing and support
 
 Create a small, reviewable change, include reproduction steps and tests, and document environmental impacts. Do not publish unapproved customer details or change live services without release authorization. Report security vulnerabilities privately via `SECURITY.md` where available.
