@@ -45,3 +45,16 @@ jobs:
       - run: npm ci
       - name: Type-check and build frontend
         run: npm run build
+
+  compose-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration with synthetic CI credentials
+        env:
+          POSTGRES_PASSWORD: ci_validation_only_not_a_real_secret
+        run: |
+          cp backend/.env.example backend/.env
+          docker compose config --quiet
+          rm -f backend/.env
