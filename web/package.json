@@ -10,12 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/three": "^0.186.0",
+    "@types/three": "^0.187.0",
     "typescript": "^5.8.2",
     "vite": "^6.2.2"
   },
   "dependencies": {
     "animejs": "^4.5.0",
-    "three": "^0.186.1"
+    "three": "^0.187.0"
   }
 }
