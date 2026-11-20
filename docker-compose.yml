@@ -64,7 +64,8 @@ services:
       RAGI_HEAP_MB: "28672"
       NODE_OPTIONS: --max-old-space-size=28672
     ports:
-      - "8787:8787"
+      # Owner-only by default. Use an authenticated HTTPS reverse proxy for remote access.
+      - "127.0.0.1:8787:8787"
     volumes:
       # Append-only JSON + DB file snapshots survive image rebuilds
       - ragi_vault:/var/ragi/data
@@ -86,7 +87,8 @@ services:
     depends_on:
       - api
     ports:
-      - "8080:80"
+      # Do not expose the private assistant UI directly to the Internet.
+      - "127.0.0.1:8080:80"
 
 volumes:
   ragi_pg:
