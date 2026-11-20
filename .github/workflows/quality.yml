@@ -57,4 +57,5 @@ jobs:
         run: |
           cp backend/.env.example backend/.env
           docker compose config --quiet
+          docker compose config --format json | python3 scripts/check-compose-boundary.py
           rm -f backend/.env

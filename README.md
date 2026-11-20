@@ -44,7 +44,9 @@ Prioritize accessibility, keyboard and touch navigation, meaningful empty/error/
 
 ## Security and data protection
 
-- **Urgent:** existing Compose defaults include a predictable database-password fallback and host port exposure for PostgreSQL/Redis. Replace defaults, enforce private networks, secret injection and firewall rules before production.
+- **Compose baseline (review required):** `POSTGRES_PASSWORD` is mandatory and PostgreSQL/Redis bind to loopback; the security branch additionally restricts the API and web UI to loopback. Set a unique non-committed password, use a secure secrets provider in production, and keep all host/firewall rules restricted.
+- **Remote use:** Do not publish ports 8787/8080 directly. Terminate TLS at an appropriately configured reverse proxy or private access gateway with authentication, then verify `RAGI_PUBLIC_ORIGIN`, `RAGI_WEB_ORIGIN`, WebAuthn RP origins, CORS and browser `VITE_API_ORIGIN` for the real site (browser `127.0.0.1` refers to the visitor's machine).
+- **Verification:** CI checks that every Compose-published port stays loopback-bound. This configuration review is not a production penetration test.
 - Verify authentication and authorization at every API boundary; protect cookies, MFA recovery and session tokens.
 - Implement encrypted backups, retention, audit events, resource quotas, monitoring and incident response.
 
