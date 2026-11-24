@@ -32,7 +32,7 @@ export default function ProjectPage() {
           {p.production_url && <a className="btn" href={p.production_url} target="_blank" rel="noreferrer noopener"><ExternalLink size={14} /> Live site</a>}
         </>} />
       <div className="grid gap-4 md:grid-cols-4">
-        <Card><Stat label="Progress" value={`${p.progress}%`} hint={`${p.task_done} of ${p.task_total} tasks done`} /><div className="mt-3"><Progress value={p.progress} /></div></Card>
+        <Card><Stat label="Progress" value={`${p.progress}%`} hint={`${p.task_done} of ${p.task_total} tasks done`} /><div className="mt-3"><Progress value={p.progress} label={`${p.name} progress`} /></div></Card>
         <Card delay={0.05}><Stat label="Due" value={<span className="text-2xl">{formatDate(p.due_date)}</span>} hint={<StatusChip status={p.status} />} /></Card>
         <Card delay={0.1}><Stat label="Billable time · 90 days" value={formatMinutes(billable)} hint={`${formatMinutes(unbilled)} not invoiced yet`} /></Card>
         <Card delay={0.15}><Stat label="Rate" value={<span className="text-2xl">{p.hourly_rate ? formatMoney(p.hourly_rate, p.currency) : "—"}</span>} hint="per hour, used for invoice requests" /></Card>

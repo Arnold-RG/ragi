@@ -27,7 +27,7 @@ export default function RetainersPage() {
                 <div><div className="num font-display text-4xl">{r.used_pct}%</div><div className="text-xs text-muted">{formatMinutes(r.used_minutes)} of {r.hours_per_month} h this month (from {formatDate(r.month_start)})</div></div>
                 <div className="text-right"><div className="eyebrow">Monthly fee</div><div className="num">{formatMoney(r.monthly_fee, r.currency)}</div></div>
               </div>
-              <div className="mt-3"><Progress value={r.used_pct} /></div>
+              <div className="mt-3"><Progress value={r.used_pct} label={`${r.name} usage`} /></div>
               <div className="mt-4 flex flex-wrap gap-1.5">{r.projects.map((p) => <span key={p.id} className="chip">{p.name}</span>)}{r.projects.length === 0 && <span className="text-xs text-muted">No projects linked yet — link one from the project settings.</span>}</div>
             </Card>
           ))}

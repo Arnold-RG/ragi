@@ -5,6 +5,12 @@
 *.pem
 *.key
 secrets/
+keyring.json
+ecosystem-keyring.json
+owner-login.txt
+pwfile
+pg.pass
+pgdata/
 
 # Python
 __pycache__/

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Sheet } from "@/components/ui/Sheet";
-import { DemoBadge, StatusChip, TbdNote } from "@/components/ui/primitives";
+import { DemoBadge, Progress, StatusChip, TbdNote } from "@/components/ui/primitives";
 
 describe("UI primitives", () => {
   it("labels sample data clearly", () => {
@@ -19,6 +19,17 @@ describe("UI primitives", () => {
   it("humanises status chips", () => {
     render(<StatusChip status="pending_approval" />);
     expect(screen.getByText("pending approval")).toBeInTheDocument();
+  });
+  it("names progress bars for assistive tech", () => {
+    render(<Progress value={40} label="Website progress" />);
+    const bar = screen.getByRole("progressbar", { name: "Website progress" });
+    expect(bar).toHaveAttribute("aria-valuenow", "40");
+    expect(bar).toHaveAttribute("aria-valuemin", "0");
+    expect(bar).toHaveAttribute("aria-valuemax", "100");
+  });
+  it("falls back to a generic name when no label is passed", () => {
+    render(<Progress value={10} />);
+    expect(screen.getByRole("progressbar", { name: "Progress" })).toBeInTheDocument();
   });
 });
 

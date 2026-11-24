@@ -70,7 +70,7 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2 truncate text-sm font-medium">{p.name} <DemoBadge show={p.is_demo} />{!p.verified && !p.is_demo && <span className="chip ">unverified</span>}</div>
                           <div className="truncate text-xs text-muted">{p.client_name ?? "Arnova Group"} · due {formatDate(p.due_date)}</div>
                         </div>
-                        <div className="hidden items-center gap-3 md:flex"><Progress value={p.progress} /><span className="num w-10 text-right text-xs text-muted">{p.progress}%</span></div>
+                        <div className="hidden items-center gap-3 md:flex"><Progress value={p.progress} label={`${p.name} progress`} /><span className="num w-10 text-right text-xs text-muted">{p.progress}%</span></div>
                         <StatusChip status={p.status} />
                       </Link>
                     </li>
@@ -83,7 +83,7 @@ export default function DashboardPage() {
               {s.retainers.length === 0 ? <Empty title="No retainers yet" /> : s.retainers.map((r) => (
                 <div key={r.id} className="mb-4 last:mb-0">
                   <div className="mb-1.5 flex items-center justify-between text-sm"><span className="truncate">{r.name}</span><StatusChip status={r.usage_state} label={`${r.used_pct}%`} /></div>
-                  <Progress value={r.used_pct} />
+                  <Progress value={r.used_pct} label={`${r.name} usage`} />
                   <div className="mt-1 text-xs text-muted">{formatMinutes(r.used_minutes)} of {r.hours_per_month} h · {r.client_name}</div>
                 </div>
               ))}

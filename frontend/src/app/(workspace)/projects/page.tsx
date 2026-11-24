@@ -43,7 +43,7 @@ export default function ProjectsPage() {
                 </div>
                 {p.summary && <p className="mb-4 line-clamp-2 text-sm text-muted">{p.summary}</p>}
                 <div className="mb-1 flex justify-between text-xs text-muted"><span>{p.task_done}/{p.task_total} tasks</span><span className="num">{p.progress}%</span></div>
-                <Progress value={p.progress} />
+                <Progress value={p.progress} label={`${p.name} progress`} />
                 <div className="relative z-10 mt-4 flex flex-wrap items-center gap-2 text-xs text-muted">
                   <DemoBadge show={p.is_demo} />
                   {!p.verified && !p.is_demo && <span className="chip" title="Not yet verified against the repository or live site">unverified</span>}

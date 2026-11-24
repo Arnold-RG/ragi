@@ -33,7 +33,7 @@ export default function PortalPage() {
                   <div><div className="font-display text-xl">{p.name}</div>{p.summary && <p className="text-sm text-muted">{p.summary}</p>}</div>
                   <StatusChip status={p.status} />
                 </div>
-                <div className="mt-4 flex items-center gap-3"><Progress value={p.progress} /><span className="num text-sm">{p.progress}%</span></div>
+                <div className="mt-4 flex items-center gap-3"><Progress value={p.progress} label={`${p.name} progress`} /><span className="num text-sm">{p.progress}%</span></div>
                 <div className="mt-1 text-xs text-muted">Target date {formatDate(p.due_date)}</div>
                 <ol className="mt-4 grid gap-2 md:grid-cols-3">
                   {p.milestones.map((m) => (

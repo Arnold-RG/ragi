@@ -78,9 +78,9 @@ export function StatusChip({ status, label }: { status: string; label?: string }
   );
 }
 
-export function Progress({ value }: { value: number }) {
+export function Progress({ value, label = "Progress" }: { value: number; label?: string }) {
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-label={label} aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
       <motion.div
         className="h-full rounded-full"
         style={{ background: "linear-gradient(90deg, var(--arn-caramel), color-mix(in oklab, var(--arn-caramel) 60%, var(--arn-sage)))" }}
