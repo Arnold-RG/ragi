@@ -18,9 +18,11 @@ def finance(_=Depends(require(Perm.READ))):
 @router.get("/integrations")
 def integrations(_=Depends(require(Perm.READ))):
     s = get_settings()
+    omh = finance_summary()
     items = [
-        {"id": "omh", "name": "Our Money Hub", "kind": "ecosystem", "connected": bool(s.omh_api_url),
-         "detail": "Budgets, AI spend and invoices" if s.omh_api_url else "OMH_API_URL not set"},
+        {"id": "omh", "name": "Our Money Hub", "kind": "ecosystem", "connected": bool(omh.get("connected")),
+         "detail": "Budgets, AI spend and invoices — signed finance-summary" if omh.get("connected")
+                   else omh.get("message") or "OMH is not connected"},
         {"id": "openai", "name": "OpenAI", "kind": "ai-provider", "connected": provider_status("openai").configured,
          "detail": provider_status("openai").detail},
         {"id": "xai", "name": "Grok / xAI", "kind": "ai-provider", "connected": provider_status("xai").configured,

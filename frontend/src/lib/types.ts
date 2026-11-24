@@ -27,6 +27,15 @@ export interface Summary {
   active_projects: Project[];
   activity: Activity[];
   safety: { agents_enabled: boolean; repository_writes_enabled: boolean; production_deployment_enabled: boolean };
+  omh: OmhSummary;
+}
+
+export interface OmhMoney { amount: string; currency: string; minor?: number }
+export interface OmhSummary {
+  connected: boolean; source: "omh"; message?: string;
+  schema_version?: string; as_of?: string; month?: string; has_data?: boolean; note?: string;
+  by_currency?: Record<string, { balance?: OmhMoney; pending?: OmhMoney; income_month?: OmhMoney; expenses_month?: OmhMoney; net_month?: OmhMoney; ai_usage_month?: OmhMoney }>;
+  ai_budgets?: { id?: string; name: string; provider?: string | null; state?: string; available?: OmhMoney }[];
 }
 export interface Client { id: string; name: string; contact_name: string | null; email: string | null; city: string | null; country: string; sector: string | null; status: string; notes: string | null; is_demo: boolean; project_count: number }
 export interface Agent { id: string; slug: string; display_name: string; department: string; role: string; provider: string; enabled: boolean; placeholder: boolean; capabilities: string[]; permissions: Record<string, boolean>; execution: Record<string, unknown>; governance: Record<string, boolean>; connection: string; connection_detail: string; run_count: number; open_tasks: number }

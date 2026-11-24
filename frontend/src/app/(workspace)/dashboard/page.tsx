@@ -110,6 +110,27 @@ export default function DashboardPage() {
               )}
               <div className="mt-4 text-xs text-muted">RAGI prepares quote and invoice requests; Our Money Hub issues them and stays the book of record.</div>
               <div className="mt-4 border-t border-line pt-3">
+                <div className="eyebrow mb-1">Our Money Hub</div>
+                {s.omh?.connected ? (
+                  <div className="space-y-2">
+                    <div className="text-sm text-positive">Connected</div>
+                    {s.omh.has_data && s.omh.by_currency && Object.keys(s.omh.by_currency).length > 0 ? (
+                      <ul className="space-y-1">
+                        {Object.entries(s.omh.by_currency).map(([cur, row]) => (
+                          <li key={cur} className="flex items-baseline justify-between gap-3 text-sm">
+                            <span className="text-muted">{cur}</span>
+                            <span className="num">{formatMoney(row.balance?.amount ?? null, row.balance?.currency ?? cur)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : <div className="text-sm text-muted">Connected — no balances in this period.</div>}
+                    {s.omh.note && <div className="text-xs text-muted">{s.omh.note}</div>}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted">{s.omh?.message ?? "OMH is not connected."}</div>
+                )}
+              </div>
+              <div className="mt-4 border-t border-line pt-3">
                 <div className="eyebrow mb-1">Websites</div>
                 <div className="text-sm">{s.websites.checked ? `${s.websites.up}/${s.websites.checked} up` : <span className="text-muted">{s.websites.total} tracked · not checked yet</span>}</div>
               </div>

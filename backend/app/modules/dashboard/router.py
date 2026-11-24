@@ -22,6 +22,7 @@ from app.modules.leads.models import Lead
 from app.modules.retainers.models import Retainer
 from app.modules.retainers.router import _out as retainer_out
 from app.modules.time_tracking.models import TimeEntry
+from app.integrations.omh.client import finance_summary
 
 router = APIRouter(tags=["dashboard"])
 
@@ -104,4 +105,5 @@ def summary(db: Session = Depends(get_db), user=Depends(require(Perm.READ))):
                       "at": a.created_at.isoformat()} for a in recent],
         "safety": {"agents_enabled": s.agents_enabled, "repository_writes_enabled": s.repository_writes_enabled,
                    "production_deployment_enabled": s.production_deployment_enabled},
+        "omh": finance_summary(),
     }
