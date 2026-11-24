@@ -1,0 +1,35 @@
+# RAGI v2 local stack — Created by Arnold Rurangwa / Arnova Group.
+# Secrets come from ./backend/.env (git-ignored; copy .env.example). Ports: web 3410, API 8410, Postgres 55410.
+name: ragi
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ragi
+      POSTGRES_DB: ragi_db
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_password
+    secrets: [pg_password]
+    ports: ["127.0.0.1:55410:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U ragi -d ragi_db"], interval: 5s, retries: 10}
+  redis:
+    image: redis:7-alpine
+    profiles: [workers]          # optional until background workers exist
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      CORS_ORIGINS: '["http://localhost:3410"]'
+    ports: ["127.0.0.1:8410:8410"]
+    depends_on: {db: {condition: service_healthy}}
+  web:
+    build:
+      context: ./frontend
+      args: {RAGI_API_ORIGIN: "http://api:8410"}
+    ports: ["127.0.0.1:3410:3410"]
+    depends_on: [api]
+secrets:
+  pg_password:
+    file: ./secrets/pg_password.txt   # git-ignored
+volumes:
+  pgdata:

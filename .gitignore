@@ -1,0 +1,37 @@
+# RAGI v2 — keep secrets and build output out of the repository
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite3
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+frontend/test-results/
+frontend/playwright-report/
+
+# Local runtime (Postgres data, logs) lives outside the repo, but just in case
+runtime/
+*.log
+.DS_Store
+.dev-field-key
+frontend/e2e/.auth/
+*.tsbuildinfo
+next-env.d.ts
+secrets/

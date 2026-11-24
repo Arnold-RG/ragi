@@ -1,0 +1,35 @@
+# PLACEHOLDER profile. Provider, capabilities and permissions are TBD by the owner
+# (see docs/SPEC_GAPS_TBD.md #17). Agents stay disabled while AGENTS_ENABLED=false.
+agent:
+  id: sentinel
+  display_name: SENTINEL
+  department: quality-security
+  role: "Quality and security review"
+  provider: tbd   # openai | xai — owner decision
+  placeholder: true
+  enabled: false
+  capabilities:
+    - security_review
+    - dependency_audit
+    - qa_testing
+    - policy_compliance
+  permissions:
+    repository_read: true
+    repository_write: false
+    production_deployment: false
+    financial_transactions: false
+    destructive_operations: false
+  execution:
+    isolated_environment: true
+    maximum_retries: 2
+    timeout_seconds: 900
+    evidence_required: true
+  financial_controls:
+    budget_authority: OMH
+    enforce_spending_limits: true
+    stop_when_budget_unavailable: true
+    record_api_usage: true
+  governance:
+    owner_approval_required: true
+    repository_contributor: false
+    ownership_rights: false

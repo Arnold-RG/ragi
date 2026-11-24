@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Build output and dependencies are not source (git-ignored)"
+paths = ['''(^|/)\.next/''', '''(^|/)node_modules/''', '''(^|/)\.venv/''', '''(^|/)test-results/''']
