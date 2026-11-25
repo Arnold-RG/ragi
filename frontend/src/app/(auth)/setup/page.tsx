@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useSecretFromFragment } from "@/lib/useSecretFromFragment";
+import { normalizeUsername, USERNAME_FIELD, USERNAME_HINT } from "@/lib/username";
 
 function SetupForm() {
   const router = useRouter();
@@ -34,7 +35,7 @@ function SetupForm() {
     setBusy(true); setError(null);
     try {
       const r = await api<{ mfa_enrolment_required: boolean }>("/auth/register", {
-        json: { setup_token: token, username, email, password, full_name: fullName },
+        json: { setup_token: token, username: normalizeUsername(username), email, password, full_name: fullName },
       });
       router.push(r.mfa_enrolment_required ? "/verify?enrol=1" : "/dashboard");
     } catch (err) {
@@ -75,11 +76,21 @@ function SetupForm() {
         </div>
         <div>
           <label className="label" htmlFor="username">Username</label>
-          <input id="username" className="input" type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={32} pattern="[a-z][a-z0-9_]{2,31}" title="3–32 characters: start with a letter, then letters, numbers or underscores" />
+          <input
+            id="username"
+            className="input"
+            type="text"
+            {...USERNAME_FIELD}
+            value={username}
+            onChange={(e) => setUsername(normalizeUsername(e.target.value))}
+            onInvalid={(e) => { e.preventDefault(); setError(USERNAME_HINT); }}
+            required
+          />
+          <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>{USERNAME_HINT}</p>
         </div>
         <div>
           <label className="label" htmlFor="email">Email</label>
-          <input id="email" className="input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input id="email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div>
           <label className="label" htmlFor="password">Password</label>
