@@ -3,7 +3,6 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import not_found
-from app.core.money import quantize, parse_strict
 from app.core.permissions import Perm
 from app.modules.retainers.models import Retainer
 from app.database.session import get_db
@@ -71,8 +70,6 @@ def create_project(body: ProjectCreate, request: Request, db: Session = Depends(
     status = data.pop("status")
     data["production_url"] = str(data["production_url"]) if data["production_url"] else None
     _check_retainer(db, user, data.get("retainer_id"))
-    if data.get("hourly_rate") is not None:
-        data["hourly_rate"] = parse_strict(data["hourly_rate"], data["currency"])
     p = Project(organization_id=user.organization_id, slug=slug, status="upcoming",
                 repo_provider="github" if data.get("repo_name") else None,
                 integrations=service.DEFAULT_INTEGRATIONS, **data)
@@ -103,8 +100,6 @@ def update_project(project_id: str, body: ProjectUpdate, request: Request, db: S
     _check_retainer(db, user, changes.get("retainer_id"))
     for k, v in changes.items():
         setattr(p, k, v)
-    if p.hourly_rate is not None:
-        p.hourly_rate = parse_strict(p.hourly_rate, p.currency)
     if new_status:
         service.apply_status(db, p, new_status)
     record(db, user, "project.updated", "project", p.id, summary=f"Updated {p.name}",

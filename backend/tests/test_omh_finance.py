@@ -1,83 +1,65 @@
-"""Finance-summary client and dashboard/integrations wiring (agreed OMH route)."""
-from unittest.mock import patch
-
-import httpx
-
-from app.core.config import get_settings
-from app.integrations.omh.client import finance_summary
+"""NOM group: RAGI must not expose money fields, finance-summary, or finance:read."""
+from tests.conftest import login
 
 
-OK = {
-    "source": "omh",
-    "schema_version": "1.0",
-    "as_of": "2026-11-25",
-    "month": "2026-11",
-    "has_data": True,
-    "by_currency": {"PLN": {"balance": {"amount": "100.00", "minor": 10000, "currency": "PLN"}}},
-    "ai_budgets": [],
-    "note": "Amounts are per currency and are never added across currencies.",
+MONEY_KEYS = {
+    "hourly_rate", "monthly_fee", "estimated_amount", "draft_total", "unit_amount",
+    "by_currency", "value_by_currency", "amount", "amount_minor", "currency",
+    "planned_cost", "funded_so_far", "budget", "over_budget",
 }
 
 
-def _response(status: int, data, url="http://127.0.0.1:8420/api/v1/finance-summary"):
-    return httpx.Response(status, json=data, request=httpx.Request("GET", url))
+def _walk(obj, path=""):
+    hits = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k in MONEY_KEYS:
+                hits.append(f"{path}.{k}" if path else k)
+            hits.extend(_walk(v, f"{path}.{k}" if path else k))
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            hits.extend(_walk(v, f"{path}[{i}]"))
+    return hits
 
 
-def test_finance_summary_not_configured():
-    assert finance_summary()["connected"] is False
+def test_nom_02_dashboard_and_projects_have_no_money(world):
+    c = login("op@ragi.local")
+    summary = c.get("/api/v1/dashboard/summary").json()
+    assert "omh" not in summary
+    assert _walk(summary) == []
+    p = c.post("/api/v1/projects", json={"name": "No-money project"}).json()
+    assert _walk(p) == []
+    listed = c.get("/api/v1/projects").json()
+    assert _walk(listed) == []
 
 
-def test_finance_summary_calls_agreed_route_and_connects(monkeypatch):
-    monkeypatch.setattr(get_settings(), "omh_api_url", "http://127.0.0.1:8420")
-    captured: dict = {}
-
-    def fake_get(url, params=None, headers=None, timeout=None):
-        captured["url"] = url
-        captured["params"] = params
-        captured["headers"] = headers
-        return _response(200, OK, url)
-
-    with patch("app.integrations.omh.client.httpx.get", side_effect=fake_get):
-        out = finance_summary()
-    assert captured["url"] == "http://127.0.0.1:8420/api/v1/finance-summary"
-    assert "/reports/summary" not in captured["url"]
-    assert captured["params"] == {"organization_id": "arnovagroup"}
-    assert captured["headers"]["X-Arnova-Key-Id"]
-    assert captured["headers"]["X-Arnova-Timestamp"]
-    assert captured["headers"]["X-Arnova-Signature"].startswith("sha256=")
-    assert out["connected"] is True
-    assert out["source"] == "omh"
-    assert out["by_currency"]["PLN"]["balance"]["minor"] == 10000
+def test_nom_n01_finance_summary_route_is_gone(world):
+    c = login("op@ragi.local")
+    assert c.get("/api/v1/finance-summary").status_code == 404
 
 
-def test_finance_summary_503_is_not_connected(monkeypatch):
-    monkeypatch.setattr(get_settings(), "omh_api_url", "http://127.0.0.1:8420")
-    with patch("app.integrations.omh.client.httpx.get",
-               return_value=_response(503, {"detail": "Service authentication is not configured"})):
-        out = finance_summary()
-    assert out["connected"] is False
-    assert "not configured" in out["message"].lower()
+def test_nom_03_no_finance_summary_helper():
+    import app.integrations.omh.client as client
+    assert not hasattr(client, "finance_summary")
 
 
-def test_finance_summary_unreachable(monkeypatch):
-    monkeypatch.setattr(get_settings(), "omh_api_url", "http://127.0.0.1:8420")
-    with patch("app.integrations.omh.client.httpx.get", side_effect=httpx.ConnectError("down")):
-        out = finance_summary()
-    assert out["connected"] is False
-    assert "unreachable" in out["message"].lower()
+def test_showcase_has_no_money_and_lists_arnold_rg_repos(world):
+    c = login("op@ragi.local")
+    data = c.get("/api/v1/showcase/sites").json()
+    assert "Arnold-RG" in data["subtitle"]
+    assert "public repos" not in data["subtitle"].lower()
+    assert data["sites"]
+    assert _walk(data) == []
+    assert any(not s["embeddable"] and "twodaymovie.onrender.com" in (s.get("live_url") or "") for s in data["sites"])
 
 
-def test_dashboard_summary_includes_omh(as_owner, monkeypatch):
-    monkeypatch.setattr("app.modules.dashboard.router.finance_summary",
-                        lambda: {"connected": True, "source": "omh", "has_data": False, "by_currency": {}})
-    s = as_owner.get("/api/v1/dashboard/summary").json()
-    assert s["omh"]["connected"] is True
-    assert s["omh"]["source"] == "omh"
-
-
-def test_integrations_uses_live_omh_status(as_owner, monkeypatch):
-    monkeypatch.setattr("app.modules.finance_bridge.router.finance_summary",
-                        lambda: {"connected": False, "source": "omh", "message": "Service authentication is not configured"})
-    items = {i["id"]: i for i in as_owner.get("/api/v1/integrations").json()["items"]}
-    assert items["omh"]["connected"] is False
-    assert "not configured" in items["omh"]["detail"].lower()
+def test_future_projects_have_no_budget_fields(world):
+    c = login("op@ragi.local")
+    r = c.post("/api/v1/future-projects", json={"name": "New bike", "target_date": "2027-05-31"})
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["name"] == "New bike"
+    assert body["open_in_money_hub"] is True
+    assert "budget" not in str(body).lower()
+    assert "over_budget" not in body
+    assert _walk(body) == []

@@ -28,7 +28,7 @@ def test_alembic_upgrade_and_seed_on_fresh_sqlite(tmp_path):
     script = (
         "from fastapi.testclient import TestClient\n"
         "from app.main import app\n"
-        "c=TestClient(app, base_url='https://t'); c.headers['X-RAGI-Request']='1'\n"
+        "c=TestClient(app, base_url='https://testserver'); c.headers.update({'X-RAGI-Request':'1','Origin':'https://testserver'})\n"
         f"r=c.post('/api/v1/auth/login', json={{'email':'owner@ragi.local','password':{pw!r}}}); assert r.json()['mfa_required'], r.text\n"
         f"r=c.post('/api/v1/auth/verify', json={{'code':{code!r}}}); assert r.status_code==200, r.text\n"
         "s=c.get('/api/v1/dashboard/summary').json(); assert not s['demo_data'] and s['agents']['total']==5\n"
@@ -51,8 +51,9 @@ def test_sample_data_is_opt_in_generic_and_priceless(tmp_path):
     con = sqlite3.connect(db)
     names = [n for (n,) in con.execute("select name from clients")]
     assert names and all(n.startswith("Sample client") for n in names)
-    assert con.execute("select count(*) from projects where is_demo=1 and (hourly_rate is not null or status='completed')").fetchone()[0] == 0
-    assert con.execute("select count(*) from leads where estimated_amount is not null").fetchone()[0] == 0
-    assert con.execute("select count(*) from retainers where monthly_fee is not null").fetchone()[0] == 0
+    cols = {row[1] for row in con.execute("pragma table_info(projects)").fetchall()}
+    assert "hourly_rate" not in cols and "currency" not in cols
+    lead_cols = {row[1] for row in con.execute("pragma table_info(leads)").fetchall()}
+    assert "estimated_amount" not in lead_cols
     assert con.execute("select count(*) from billing_handoffs").fetchone()[0] == 0
     assert con.execute("select count(*) from projects where is_demo=1 and name not like 'Sample%'").fetchone()[0] == 0

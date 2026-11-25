@@ -1,13 +1,10 @@
 from datetime import UTC, date, datetime
-from decimal import Decimal
-from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.money import quantize, parse_strict
 from app.core.permissions import Perm
 from app.database.session import get_db
 from app.modules.audit.service import record
@@ -25,8 +22,6 @@ class RetainerIn(BaseModel):
     client_id: str
     name: str = Field(min_length=2, max_length=200)
     hours_per_month: int = Field(gt=0, le=744)
-    monthly_fee: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Literal["PLN", "RWF", "EUR", "USD", "GBP"] = "PLN"
     starts_on: date
 
 
@@ -46,8 +41,7 @@ def _out(db: Session, r: Retainer) -> dict:
     return {"id": r.id, "client_id": r.client_id,
             "client_name": db.scalar(select(Client.name).where(Client.id == r.client_id)),
             "name": r.name, "hours_per_month": r.hours_per_month,
-            "monthly_fee": None if r.monthly_fee is None else str(quantize(Decimal(r.monthly_fee), r.currency)),
-            "currency": r.currency, "starts_on": r.starts_on.isoformat(), "status": r.status, "is_demo": r.is_demo,
+            "starts_on": r.starts_on.isoformat(), "status": r.status, "is_demo": r.is_demo,
             "month_start": month_start.date().isoformat(), "used_minutes": used, "included_minutes": included,
             "used_pct": round(ratio * 100), "usage_state": state,
             "projects": [{"id": p.id, "name": p.name} for p in db.scalars(select(Project).where(Project.retainer_id == r.id))]}
@@ -65,8 +59,6 @@ def create_retainer(body: RetainerIn, request: Request, db: Session = Depends(ge
     if not c or c.organization_id != user.organization_id:
         raise HTTPException(422, "Unknown client")
     data = body.model_dump()
-    if data["monthly_fee"] is not None:
-        data["monthly_fee"] = parse_strict(data["monthly_fee"], body.currency)
     r = Retainer(organization_id=user.organization_id, **data)
     db.add(r)
     db.flush()

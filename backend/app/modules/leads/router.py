@@ -1,14 +1,14 @@
 from datetime import datetime
-from decimal import Decimal
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.emails import EmailAddress
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import not_found
-from app.core.money import CURRENCIES, quantize, parse_strict
 from app.core.permissions import Perm
 from app.database.session import get_db
 from app.events.outbox import publish
@@ -21,29 +21,23 @@ from app.modules.projects.models import Project
 
 router = APIRouter(prefix="/leads", tags=["pipeline"])
 Stage = Literal["new", "contacted", "qualified", "proposal", "won", "lost"]
-Currency = Literal["PLN", "RWF", "EUR", "USD", "GBP"]
-
 
 class LeadIn(BaseModel):
     name: str = Field(min_length=2, max_length=200)
     company: str | None = Field(default=None, max_length=200)
-    email: EmailStr | None = None
+    email: EmailAddress | None = None
     source: str | None = Field(default=None, max_length=60)
     service: str | None = Field(default=None, max_length=80)
     stage: Stage = "new"
-    estimated_amount: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Currency = "PLN"
     notes: str | None = Field(default=None, max_length=4000)
 
 
 class LeadUpdate(BaseModel):
     name: str | None = None
     company: str | None = None
-    email: EmailStr | None = None
+    email: EmailAddress | None = None
     service: str | None = None
     stage: Stage | None = None
-    estimated_amount: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Currency | None = None
     notes: str | None = None
     lost_reason: str | None = Field(default=None, max_length=300)
 
@@ -57,8 +51,6 @@ class LeadOut(BaseModel):
     source: str | None
     service: str | None
     stage: str
-    estimated_amount: Decimal | None
-    currency: str
     notes: str | None
     lost_reason: str | None
     client_id: str | None
@@ -66,11 +58,6 @@ class LeadOut(BaseModel):
     is_demo: bool
     created_at: datetime
     updated_at: datetime
-
-    @field_serializer("estimated_amount")
-    def _amt(self, v: Decimal | None):
-        return None if v is None else str(quantize(v, self.currency))
-
 
 def _get(db, user, lead_id) -> Lead:
     lead = db.get(Lead, lead_id)
@@ -87,8 +74,6 @@ def list_leads(db: Session = Depends(get_db), user=Depends(require(Perm.READ))):
 @router.post("", response_model=LeadOut, status_code=201)
 def create_lead(body: LeadIn, request: Request, db: Session = Depends(get_db), user=Depends(require(Perm.CLIENTS_WRITE))):
     data = body.model_dump()
-    if data["estimated_amount"] is not None:
-        data["estimated_amount"] = parse_strict(data["estimated_amount"], body.currency)
     lead = Lead(organization_id=user.organization_id, **data)
     db.add(lead)
     db.flush()
@@ -106,8 +91,6 @@ def update_lead(lead_id: str, body: LeadUpdate, request: Request, db: Session = 
     old = lead.stage
     for k, v in changes.items():
         setattr(lead, k, v)
-    if lead.estimated_amount is not None:
-        lead.estimated_amount = parse_strict(lead.estimated_amount, lead.currency)
     record(db, user, "lead.stage" if lead.stage != old else "lead.updated", "lead", lead.id,
            summary=f"{lead.company or lead.name}: {old} → {lead.stage}" if lead.stage != old else f"Updated lead {lead.name}",
            request=request)
@@ -143,5 +126,3 @@ def convert(lead_id: str, body: ConvertIn, request: Request, db: Session = Depen
     db.commit()
     return lead
 
-
-assert set(CURRENCIES) == {"PLN", "RWF", "EUR", "USD"}

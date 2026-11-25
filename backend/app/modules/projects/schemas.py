@@ -1,9 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from decimal import Decimal
-
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 ProjectStatus = Literal["upcoming", "active", "paused", "completed", "unverified", "failed"]
 Priority = Literal["low", "medium", "high", "critical"]
@@ -27,8 +25,6 @@ class ProjectBase(BaseModel):
     start_date: date | None = None
     due_date: date | None = None
     retainer_id: str | None = None
-    hourly_rate: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Literal["PLN", "RWF", "EUR", "USD", "GBP"] = "PLN"
 
 
 class ProjectCreate(ProjectBase):
@@ -48,8 +44,6 @@ class ProjectUpdate(BaseModel):
     start_date: date | None = None
     due_date: date | None = None
     retainer_id: str | None = None
-    hourly_rate: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Literal["PLN", "RWF", "EUR", "USD", "GBP"] | None = None
 
 
 class MilestoneOut(BaseModel):
@@ -84,8 +78,6 @@ class ProjectOut(BaseModel):
     due_date: date | None
     completed_at: datetime | None
     retainer_id: str | None = None
-    hourly_rate: Decimal | None = None
-    currency: str = "PLN"
     verified: bool
     is_demo: bool
     owner_approval_required: bool
@@ -94,11 +86,6 @@ class ProjectOut(BaseModel):
     progress: int = 0
     created_at: datetime
     updated_at: datetime
-
-
-    @field_serializer("hourly_rate")
-    def _rate(self, v: Decimal | None):
-        return None if v is None else str(v)
 
 
 class ProjectDetail(ProjectOut):

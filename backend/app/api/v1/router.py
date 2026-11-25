@@ -18,7 +18,9 @@ from app.modules.reports.router import router as reports
 from app.modules.search.router import router as search
 from app.modules.tasks.router import router as tasks
 from app.modules.websites.router import router as websites
+from app.modules.showcase.router import router as showcase
+from app.modules.future_projects.router import router as future_projects
 
 api_router = APIRouter(prefix="/api/v1")
-for r in (auth, dashboard, projects, tasks, clients, leads, time_entries, retainers, billing, portal, agents, approvals, websites, reports, search, finance, audit, events):
+for r in (auth, dashboard, projects, tasks, clients, leads, time_entries, retainers, billing, portal, agents, approvals, websites, showcase, future_projects, reports, search, finance, audit, events):
     api_router.include_router(r)

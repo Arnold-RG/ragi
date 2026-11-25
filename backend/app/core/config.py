@@ -19,7 +19,21 @@ class Settings(BaseSettings):
     redis_url: str | None = None
 
     # Browser sessions
-    session_cookie_name: str = "ragi_session"
+    session_cookie_name: str = "__Host-ragi_session"
+    session_cookie_legacy_name: str = "ragi_session"
+    public_base_url: str = "http://localhost:3410"
+    forwarded_allow_ips: str = "127.0.0.1,::1"
+    registration_mode: str = "closed"  # closed | invite | open
+    ragi_owner_setup_token: str = ""
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    apple_client_id: str = ""  # Services ID
+    apple_team_id: str = ""
+    apple_key_id: str = ""
+    apple_private_key: str = ""  # PEM contents or empty when unset
+    mfa_pending_minutes: int = 10
+    idle_timeout_minutes_privileged: int = 30
+    idle_timeout_minutes: int = 120
     session_ttl_hours: int = 12
     cookie_secure: bool = True  # browsers accept Secure cookies on http://localhost
     # Fernet key for encrypting sensitive columns (MFA secrets). Required outside development.
@@ -86,6 +100,10 @@ class Settings(BaseSettings):
                 problems.append("FIELD_ENCRYPTION_KEY is required")
             if self.api_docs_enabled:
                 problems.append("API_DOCS_ENABLED must be false")
+            if self.registration_mode == "open":
+                problems.append("REGISTRATION_MODE=open requires an explicit operator confirmation")
+            if not self.google_client_id and not self.apple_client_id:
+                pass  # providers stay disabled until client IDs exist
             if problems:
                 raise ValueError("Refusing to start outside development: " + "; ".join(problems))
         return self

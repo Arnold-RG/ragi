@@ -7,6 +7,7 @@ from pathlib import Path
 _tmp = Path(tempfile.mkdtemp(prefix="ragi-tests-"))
 os.environ.update({
     "APP_ENV": "test",
+    "PUBLIC_BASE_URL": "https://testserver",
     "DATABASE_URL": f"sqlite:///{_tmp / 'ragi-test.db'}",
     "FIELD_ENCRYPTION_KEY": "test-only-field-key-not-a-secret-0000000000",
     "ECOSYSTEM_KEYRING_FILE": str(_tmp / "keyring.json"),
@@ -18,7 +19,7 @@ KEYRING = {"keys": [
     {"kid": "omh-test", "service": "omh", "secret": "o" * 40, "scopes": ["events:write"]},
     {"kid": "omh-next", "service": "omh", "secret": "n" * 40, "scopes": ["events:write"]},
     {"kid": "omh-old", "service": "omh", "secret": "x" * 40, "scopes": ["events:write"], "not_after": "2020-01-01T00:00:00Z"},
-    {"kid": "omh-readonly", "service": "omh", "secret": "r" * 40, "scopes": ["finance:read"]},
+    {"kid": "omh-readonly", "service": "omh", "secret": "r" * 40, "scopes": ["events:read"]},
     {"kid": "ragi-test", "service": "ragi", "secret": "g" * 40, "scopes": ["budget:reserve", "events:write"]},
 ]}
 (_tmp / "keyring.json").write_text(json.dumps(KEYRING))
@@ -94,7 +95,7 @@ def world(db):
 
 def make_client() -> TestClient:
     c = TestClient(app, base_url="https://testserver")
-    c.headers.update({"X-RAGI-Request": "1"})
+    c.headers.update({"X-RAGI-Request": "1", "Origin": "https://testserver"})
     return c
 
 

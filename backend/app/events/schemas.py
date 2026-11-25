@@ -15,6 +15,7 @@ RAGI_PUBLISHES = {
     # PROPOSED v0 — not in master spec §10; awaiting OMH confirmation (spec gap #12)
     "quotation.requested",
     "invoice.requested",
+    "billing.handoff.ready",
 }
 RAGI_ACCEPTS = {
     "budget.updated",

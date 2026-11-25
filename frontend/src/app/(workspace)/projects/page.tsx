@@ -114,7 +114,7 @@ function NewProject({ open, onClose, onCreated }: { open: boolean; onClose: () =
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(null);
     try {
-      await api("/projects", { json: { ...f, client_id: f.client_id || null, due_date: f.due_date || null, hourly_rate: null, summary: f.summary || null } });
+      await api("/projects", { json: { ...f, client_id: f.client_id || null, due_date: f.due_date || null, summary: f.summary || null } });
       onCreated(); onClose();
     } catch (err) { setError(err instanceof ApiError ? err.message : "Could not create the project"); }
   };

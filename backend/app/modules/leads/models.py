@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base, IdMixin, TimestampMixin
@@ -15,8 +15,6 @@ class Lead(IdMixin, TimestampMixin, Base):
     source: Mapped[str | None] = mapped_column(String(60))
     service: Mapped[str | None] = mapped_column(String(80))
     stage: Mapped[str] = mapped_column(String(20), default="new", nullable=False, index=True)
-    estimated_amount: Mapped[object | None] = mapped_column(Numeric(18, 2))
-    currency: Mapped[str] = mapped_column(String(3), default="PLN", nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
     lost_reason: Mapped[str | None] = mapped_column(String(300))
     client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id", ondelete="SET NULL"))

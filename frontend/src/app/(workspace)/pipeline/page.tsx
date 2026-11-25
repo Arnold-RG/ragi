@@ -38,7 +38,7 @@ export default function PipelinePage() {
   const [open, setOpen] = useState<Lead | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<string[]>(["new", "lost"]);
+  const [collapsed, setCollapsed] = useState<string[]>(["won", "lost"]);
   const phone = usePhone();
   const move = async (l: Lead, stage: string) => {
     setError(null);
@@ -55,7 +55,7 @@ export default function PipelinePage() {
   });
   return (
     <>
-      <PageHeader title="Pipeline" subtitle="From first enquiry to signed work. A won lead becomes a client and an upcoming project in one step."
+      <PageHeader title="Pipeline" subtitle="From first enquiry to signed work — counts only. A won lead becomes a client and an upcoming project."
         actions={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus size={15} /> New card</button>} />
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       {!data ? <Skeleton className="h-96" /> : (
@@ -104,7 +104,7 @@ function LeadSheet({ lead, onClose, onChanged, move }: { lead: Lead | null; onCl
         <div className="flex flex-wrap gap-2"><DemoBadge show={lead.is_demo} /><span className="chip">{lead.stage}</span>{lead.service && <span className="chip">{lead.service}</span>}</div>
         <div className="grid grid-cols-2 gap-3">
           <div><div className="eyebrow">Contact</div><div>{lead.name}</div><div className="text-xs text-muted">{lead.email ?? "no email"}</div></div>
-          <div><div className="eyebrow">Estimate</div><div className="text-xs text-muted">Amounts live in Our Money Hub.<br /><OpenInMoneyHub /></div></div>
+          <div><div className="eyebrow">Estimate</div><div className="text-xs text-muted">Estimates live in Our Money Hub. <OpenInMoneyHub /></div></div>
         </div>
         {lead.notes && <p className="text-muted">{lead.notes}</p>}
         {lead.stage !== "won" && (
@@ -135,7 +135,7 @@ function NewLead({ open, onClose, onCreated }: { open: boolean; onClose: () => v
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(null);
     const body = Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v === "" ? null : v]));
-    try { await api("/leads", { json: { ...body, estimated_amount: null } }); onCreated(); onClose(); }
+    try { await api("/leads", { json: { ...body } }); onCreated(); onClose(); }
     catch (err) { setError(err instanceof ApiError ? err.message : "Could not save the lead"); }
   };
   return (

@@ -19,7 +19,7 @@ export function Sidebar({ rail = false }: { rail?: boolean }) {
     "/approvals": s?.approvals.pending,
     "/tasks": s?.tasks.open,
   };
-  const groups = ["Operate", "Studio", "Intelligence", "Control"] as const;
+  const groups = ["Workspace", "Control", "More"] as const;
   const initials = me?.full_name.split(" ").map((p) => p[0]).join("").slice(0, 2) ?? "AR";
   return (
     <aside className={clsx("side hidden lg:flex", rail && "shrink-0")} aria-label="Workspace">

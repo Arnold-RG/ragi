@@ -1,6 +1,6 @@
 "use client";
 import clsx from "clsx";
-import { FolderKanban, LayoutDashboard, Plus, Search, ShieldCheck } from "lucide-react";
+import { Bot, FolderKanban, LayoutDashboard, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -19,7 +19,8 @@ export function MobileNavigation({ onSearch }: { onSearch?: () => void }) {
   const pending = s?.approvals.pending ?? 0;
   const tabs = [
     { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-    { href: "/pipeline", label: "Board", icon: FolderKanban },
+    { href: "/projects", label: "Projects", icon: FolderKanban },
+    { href: "/agents", label: "Agents", icon: Bot },
   ];
   return (
     <>
@@ -33,33 +34,25 @@ export function MobileNavigation({ onSearch }: { onSearch?: () => void }) {
             </Link>
           );
         })}
-        <button type="button" className="tab" aria-label="New" onClick={() => setMore(true)}>
-          <span className="tab-new grid place-items-center"><Plus size={22} strokeWidth={2.4} /></span>
-        </button>
-        <Link href="/approvals" className={clsx("tab", path.startsWith("/approvals") && "on")} aria-current={path.startsWith("/approvals") ? "page" : undefined}>
+        <button type="button" className="tab" aria-label={pending ? `More, ${pending} approvals waiting` : "More"} onClick={() => setMore(true)}>
           <span className="relative">
-            <ShieldCheck size={18} />
+            <MoreHorizontal size={18} />
             {pending > 0 && <span className="tbadge">{pending}</span>}
           </span>
-          <span className="tab-label">Approvals</span>
-        </Link>
-        <button type="button" className="tab" aria-label="Search" onClick={onSearch}>
-          <Search size={18} />
-          <span className="tab-label">Search</span>
+          <span className="tab-label">More</span>
         </button>
       </nav>
-      <Sheet id="more-sheet" open={more} onClose={() => setMore(false)} title="Create or go to">
+      <Sheet id="more-sheet" open={more} onClose={() => setMore(false)} title="More">
         <div className="mb-4"><EcosystemSwitcher /></div>
-        <div className="mb-3 flex gap-2">
-          <button className="btn btn-primary flex-1" onClick={() => { setMore(false); router.push("/pipeline"); }}>New lead</button>
-          <button className="btn flex-1" onClick={() => { setMore(false); router.push("/tasks"); }}>New task</button>
-        </div>
         <div className="grid grid-cols-3 gap-2">
-          {NAV.filter((n) => !["/dashboard", "/pipeline", "/approvals"].includes(n.href)).map((n) => (
+          {NAV.filter((n) => !["/dashboard", "/projects", "/agents"].includes(n.href)).map((n) => (
             <Link key={n.href} href={n.href} onClick={() => setMore(false)}
               className={clsx("flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-2xl border p-3 text-center text-xs",
                 path === n.href || path.startsWith(n.href + "/") ? "border-accent/50 bg-accent/10" : "border-line bg-surface-2")}>
-              <n.icon size={20} style={{ color: "var(--primary-text)" }} />
+              <span className="relative">
+                <n.icon size={20} style={{ color: "var(--primary-text)" }} />
+                {n.href === "/approvals" && pending > 0 && <span className="tbadge">{pending}</span>}
+              </span>
               {n.label}
             </Link>
           ))}

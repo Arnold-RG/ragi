@@ -5,7 +5,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.money import quantize
 from app.core.permissions import Perm
 from app.database.session import get_db
 from app.modules.agents.models import Agent, AgentRun
@@ -22,7 +21,6 @@ from app.modules.leads.models import Lead
 from app.modules.retainers.models import Retainer
 from app.modules.retainers.router import _out as retainer_out
 from app.modules.time_tracking.models import TimeEntry
-from app.integrations.omh.client import finance_summary
 
 router = APIRouter(tags=["dashboard"])
 
@@ -64,10 +62,6 @@ def summary(db: Session = Depends(get_db), user=Depends(require(Perm.READ))):
                         .order_by(AuditLog.id.desc()).limit(12)).all()
     open_stages = ["new", "contacted", "qualified", "proposal"]
     leads_by_stage = dict(db.execute(select(Lead.stage, func.count()).where(Lead.organization_id == org).group_by(Lead.stage)).all())
-    # Pipeline value is reported PER CURRENCY — amounts in different currencies are never added together.
-    pipeline_value = {cur: str(quantize(total, cur)) for cur, total in db.execute(
-        select(Lead.currency, func.sum(Lead.estimated_amount)).where(Lead.organization_id == org, Lead.stage.in_(open_stages))
-        .group_by(Lead.currency)).all() if total is not None}
     month_start = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     billable = db.scalar(select(func.coalesce(func.sum(TimeEntry.minutes), 0)).where(
         TimeEntry.organization_id == org, TimeEntry.billable.is_(True), TimeEntry.started_at >= month_start)) or 0
@@ -78,7 +72,7 @@ def summary(db: Session = Depends(get_db), user=Depends(require(Perm.READ))):
                                         .group_by(BillingHandoff.status)).all())
     return {
         "pipeline": {"by_stage": leads_by_stage, "open": sum(leads_by_stage.get(s_, 0) for s_ in open_stages),
-                     "won": leads_by_stage.get("won", 0), "value_by_currency": pipeline_value},
+                     "won": leads_by_stage.get("won", 0)},
         "time": {"month_start": month_start.date().isoformat(), "billable_minutes": int(billable),
                  "non_billable_minutes": int(non_billable)},
         "retainers": retainers,
@@ -105,5 +99,4 @@ def summary(db: Session = Depends(get_db), user=Depends(require(Perm.READ))):
                       "at": a.created_at.isoformat()} for a in recent],
         "safety": {"agents_enabled": s.agents_enabled, "repository_writes_enabled": s.repository_writes_enabled,
                    "production_deployment_enabled": s.production_deployment_enabled},
-        "omh": finance_summary(),
     }

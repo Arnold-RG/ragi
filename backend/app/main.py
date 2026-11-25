@@ -99,7 +99,7 @@ async def operations_feed(ws: WebSocket):
     if ws.headers.get("origin") not in settings.cors_origins:
         await ws.close(code=4403)
         return
-    token = ws.cookies.get(settings.session_cookie_name)
+    token = ws.cookies.get(settings.session_cookie_name) or ws.cookies.get(getattr(settings, 'session_cookie_legacy_name', 'ragi_session'))
     org_id = await run_in_threadpool(_ws_auth, token)
     if not org_id:
         await ws.close(code=4401)

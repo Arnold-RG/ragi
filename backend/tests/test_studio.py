@@ -8,8 +8,7 @@ from tests.conftest import login
 
 
 def _project(c, world, **kw):
-    body = {"name": "Kigali booking site", "client_id": world.client_a.id, "status": "active", "hourly_rate": "25000",
-            "currency": "RWF", **kw}
+    body = {"name": "Kigali booking site", "client_id": world.client_a.id, "status": "active", **kw}
     r = c.post("/api/v1/projects", json=body)
     assert r.status_code == 201, r.text
     return r.json()
@@ -39,9 +38,8 @@ def test_cross_org_project_invisible(world):
 
 def test_lead_pipeline_and_conversion(world):
     c = login("op@ragi.local")
-    lead = c.post("/api/v1/leads", json={"name": "Aline", "company": "Kivu Lodge", "estimated_amount": "1800000",
-                                         "currency": "RWF"}).json()
-    assert lead["estimated_amount"] == "1800000"
+    lead = c.post("/api/v1/leads", json={"name": "Aline", "company": "Kivu Lodge"}).json()
+    assert "estimated_amount" not in lead and "currency" not in lead
     assert c.patch(f"/api/v1/leads/{lead['id']}", json={"stage": "won"}).status_code == 422
     c.patch(f"/api/v1/leads/{lead['id']}", json={"stage": "proposal"})
     won = c.post(f"/api/v1/leads/{lead['id']}/convert", json={"project_name": "Kivu Lodge website"}).json()
@@ -49,12 +47,12 @@ def test_lead_pipeline_and_conversion(world):
     assert c.post(f"/api/v1/leads/{lead['id']}/convert", json={"project_name": "again"}).status_code == 409
 
 
-def test_pipeline_values_never_summed_across_currencies(world):
+def test_pipeline_summary_has_no_money(world):
     c = login("op@ragi.local")
-    c.post("/api/v1/leads", json={"name": "Lead A", "estimated_amount": "1000", "currency": "RWF"})
-    c.post("/api/v1/leads", json={"name": "Lead B", "estimated_amount": "10.50", "currency": "PLN"})
-    v = c.get("/api/v1/dashboard/summary").json()["pipeline"]["value_by_currency"]
-    assert v == {"RWF": "1000", "PLN": "10.50"}
+    c.post("/api/v1/leads", json={"name": "Lead A"})
+    pipe = c.get("/api/v1/dashboard/summary").json()["pipeline"]
+    assert "value_by_currency" not in pipe
+    assert "estimated_amount" not in str(pipe)
 
 
 def test_timer_start_stop_and_single_running(world):
@@ -73,7 +71,8 @@ def test_invoice_request_from_time_prevents_double_billing(world, db):
     c.post("/api/v1/time-entries", json={"project_id": p["id"], "minutes": 90})
     c.post("/api/v1/time-entries", json={"project_id": p["id"], "minutes": 30, "billable": False})
     inv = c.post("/api/v1/billing-handoffs/invoices/from-time", json={"project_id": p["id"]}).json()
-    assert inv["draft_total"] == "37500" and inv["currency"] == "RWF"  # 1.5 h × 25,000 RWF
+    assert "draft_total" not in inv and "currency" not in inv
+    assert inv["status"] == "draft" and inv["kind"] == "invoice"
     assert c.post("/api/v1/billing-handoffs/invoices/from-time", json={"project_id": p["id"]}).status_code == 422
     billed = db.scalars(select(TimeEntry).where(TimeEntry.billing_handoff_id == inv["id"])).all()
     assert len(billed) == 1
@@ -82,18 +81,18 @@ def test_invoice_request_from_time_prevents_double_billing(world, db):
 def test_quote_handoff_needs_owner_approval_then_emits_event(world, db):
     c = login("op@ragi.local")
     q = c.post("/api/v1/billing-handoffs/quotes", json={
-        "client_id": world.client_a.id, "title": "Website", "currency": "PLN",
-        "lines": [{"description": "Design", "quantity": "1", "unit_amount": "1000.10"},
-                  {"description": "Pages", "quantity": "3", "unit_amount": "333.33"}]}).json()
-    assert q["draft_total"] == "2000.09" and q["status"] == "draft"
+        "client_id": world.client_a.id, "title": "Website",
+        "lines": [{"description": "Design", "quantity": "1"},
+                  {"description": "Pages", "quantity": "3"}]}).json()
+    assert "draft_total" not in q and q["status"] == "draft"
     q = c.post(f"/api/v1/billing-handoffs/{q['id']}/submit").json()
     assert q["status"] == "pending_approval"
     assert c.post(f"/api/v1/approvals/{q['approval_id']}/decide", json={"decision": "approved"}).status_code == 403
     owner = login("owner@ragi.local", world.totp_secret)
     assert owner.post(f"/api/v1/approvals/{q['approval_id']}/decide", json={"decision": "approved"}).status_code == 200
-    ev = db.scalar(select(EventOutbox).where(EventOutbox.event_type == "quotation.requested"))
-    assert ev.payload["data"]["draft_total"] == {"amount": "2000.09", "currency": "PLN"}
-    assert ev.payload["data"]["ragi_handoff_id"] == q["id"]
+    ev = db.scalar(select(EventOutbox).where(EventOutbox.event_type == "billing.handoff.ready"))
+    assert "draft_total" not in ev.payload["data"] and "currency" not in ev.payload.get("data", {})
+    assert ev.payload["data"]["handoff_id"] == q["id"]
     assert owner.post(f"/api/v1/approvals/{q['approval_id']}/decide", json={"decision": "approved"}).status_code == 409
 
 
@@ -111,12 +110,12 @@ def test_rejected_invoice_releases_time(world, db):
 def test_retainer_usage_warning(world):
     c = login("op@ragi.local")
     r = c.post("/api/v1/retainers", json={"client_id": world.client_a.id, "name": "Care", "hours_per_month": 2,
-                                          "monthly_fee": "100000", "currency": "RWF",
+                                          
                                           "starts_on": date.today().isoformat()}).json()
     p = _project(c, world, retainer_id=r["id"])
     c.post("/api/v1/time-entries", json={"project_id": p["id"], "minutes": 100})
     got = c.get("/api/v1/retainers").json()[0]
-    assert got["used_minutes"] == 100 and got["usage_state"] == "warning" and got["monthly_fee"] == "100000"
+    assert got["used_minutes"] == 100 and got["usage_state"] == "warning" and "monthly_fee" not in got
 
 
 def test_portal_user_sees_only_own_client(world):

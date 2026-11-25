@@ -1,17 +1,33 @@
 "use client";
-import { ArrowRight, Lock } from "lucide-react";
-import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Divider, ProviderButtons } from "@/components/auth/AuthShell";
 import { api, ApiError } from "@/lib/api";
+
+interface AuthConfig {
+  registration_mode: string;
+  owner_setup: boolean;
+  providers: { google: boolean; apple: boolean };
+}
+
+const GENERIC = "Email or password is incorrect";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cfg, setCfg] = useState<AuthConfig | null>(null);
+
+  useEffect(() => {
+    api<AuthConfig>("/auth/config").then(setCfg).catch(() => setCfg({
+      registration_mode: "closed", owner_setup: false, providers: { google: false, apple: false },
+    }));
+  }, []);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setError(null);
@@ -21,31 +37,41 @@ export default function LoginPage() {
       else if (r.mfa_required) router.push("/verify");
       else router.push(r.user?.role === "client" ? "/portal" : "/dashboard");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not reach RAGI");
+      // One generic message for unknown email, wrong password and lockout-adjacent failures.
+      setError(err instanceof ApiError && err.status === 429 ? "Too many attempts. Try again later." : GENERIC);
     } finally { setBusy(false); }
   };
+
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <h2 className="font-display text-3xl font-medium tracking-tight">Sign in</h2>
-      <p className="mt-2 text-sm text-muted">This sign-in is only for RAGI. Our Money Hub has its own accounts and login.</p>
-      <form onSubmit={submit} className="mt-8 space-y-4">
+    <>
+      <h1 className="font-display text-3xl font-medium tracking-tight">Sign in to RAGI</h1>
+      <p className="mt-2 text-sm" style={{ color: "var(--text2)" }}>Welcome back. Use your email or a connected account. This sign-in is only for RAGI.</p>
+      <div className="mt-8">
+        <ProviderButtons enabled={cfg?.providers ?? { google: false, apple: false }} />
+      </div>
+      <Divider />
+      <form onSubmit={submit} className="space-y-4">
         <div>
           <label className="label" htmlFor="email">Email</label>
           <input id="email" className="input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div>
-          <label className="label" htmlFor="password">Password</label>
-          <input id="password" className="input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <label className="label flex items-center justify-between" htmlFor="password">
+            Password
+            <Link href="/forgot" className="text-xs font-medium" style={{ color: "var(--accent)" }}>Forgot password?</Link>
+          </label>
+          <div className="relative">
+            <input id="password" className="input pr-20" type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <button type="button" className="absolute right-2 top-1/2 min-h-11 min-w-11 -translate-y-1/2 text-xs" style={{ color: "var(--text2)" }} aria-label={show ? "Hide password" : "Show password"} onClick={() => setShow((v) => !v)}>{show ? "Hide" : "Show"}</button>
+          </div>
         </div>
-        {error && <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
-        <button className="btn btn-primary h-11 w-full" disabled={busy}>
-          {busy ? "Signing in…" : <>Continue <ArrowRight size={16} /></>}
-        </button>
+        {error && <p role="alert" className="rounded-xl border px-3 py-2 text-sm" style={{ borderColor: "var(--danger)", color: "var(--danger)", background: "color-mix(in srgb, var(--danger) 12%, transparent)" }}>{error}</p>}
+        <button className="btn btn-primary h-12 w-full" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
       </form>
-      <div className="mt-6 flex items-center justify-between text-xs text-muted">
-        <span className="flex items-center gap-1.5"><Lock size={12} /> Protected with two-step verification</span>
-        <Link href="/recovery" className="link-hit hover:text-ink">Forgot password?</Link>
-      </div>
-    </motion.div>
+      <p className="mt-6 flex items-start gap-2 text-xs" style={{ color: "var(--text2)" }}>
+        Accounts are by invite only. Have an invite link? Open it to create your account.
+        {cfg?.owner_setup && <>{" "}If you are setting this instance up, <Link href="/setup" className="underline">use the owner setup form</Link>.</>}
+      </p>
+    </>
   );
 }

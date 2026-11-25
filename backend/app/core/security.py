@@ -8,9 +8,11 @@ import pyotp
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
-_hasher = PasswordHasher()  # Argon2id defaults
+# RFC 9106 "low memory" profile, pinned so hashes stay reproducible across upgrades.
+_hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4, hash_len=32, salt_len=16)
 
 MIN_PASSWORD_LENGTH = 12
+MAX_PASSWORD_LENGTH = 128
 
 
 def hash_password(password: str) -> str:
@@ -21,6 +23,13 @@ def verify_password(password_hash: str, password: str) -> bool:
     try:
         return _hasher.verify(password_hash, password)
     except (VerifyMismatchError, VerificationError, InvalidHashError):
+        return False
+
+
+def needs_rehash(password_hash: str) -> bool:
+    try:
+        return _hasher.check_needs_rehash(password_hash)
+    except Exception:
         return False
 
 

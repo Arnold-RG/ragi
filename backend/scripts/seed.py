@@ -191,7 +191,7 @@ def seed(owner_email: str, password_file: Path | None, with_demo: bool) -> None:
             demo_projects = {p.name: p for p in db.scalars(select(Project).where(Project.is_demo))}
             pa = demo_projects["Sample project A"]
             ret = Retainer(organization_id=org.id, client_id=pa.client_id, name="Sample retainer", hours_per_month=10,
-                           monthly_fee=None, currency="PLN", starts_on=today.replace(day=1), is_demo=True)
+                           starts_on=today.replace(day=1), is_demo=True)
             db.add(ret)
             db.flush()
             pa.retainer_id = ret.id
@@ -204,7 +204,7 @@ def seed(owner_email: str, password_file: Path | None, with_demo: bool) -> None:
                                  billable=bill, started_at=st, ended_at=st + timedelta(minutes=mins), minutes=mins, is_demo=True))
             for i, stage in enumerate(["new", "contacted", "qualified", "proposal"]):
                 db.add(Lead(organization_id=org.id, name=f"Sample lead {chr(65 + i)}", company=None, stage=stage,
-                            currency="PLN", estimated_amount=None, service="Website", source="Sample", is_demo=True,
+                            service="Website", source="Sample", is_demo=True,
                             notes="SAMPLE DATA — not a real enquiry."))
             ensure_user(db, org, "portal-demo@ragi.local", password_file, full_name="Sample client A (portal)",
                         role="client", env_var="RAGI_PORTAL_DEMO_PASSWORD", client_id=pa.client_id)

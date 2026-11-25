@@ -1,3 +1,4 @@
+/** Showcase demos may be framed from arnold-rg.github.io; production RAGI itself must never be served from that origin. */
 import type { NextConfig } from "next";
 
 // RAGI v2 frontend — created by Arnold Rurangwa / Arnova Group.
@@ -10,6 +11,7 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Content-Security-Policy", value: "default-src 'self'; frame-ancestors 'none'; frame-src 'self' https://arnold-rg.github.io https://arnova-africa-preview.onrender.com https://twodaymovie-site.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'" },
 ];
 
 const nextConfig: NextConfig = {

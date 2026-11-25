@@ -1,25 +1,25 @@
 import {
-  Activity, BarChart3, Bot, FolderKanban, Handshake, LayoutDashboard, ListTodo, Receipt, Repeat,
-  ScrollText, Settings, ShieldCheck, Timer, Users, type LucideIcon,
+  Activity, Bot, FolderKanban, Handshake, LayoutDashboard, ListTodo, Settings, ShieldCheck,
+  Sparkles, Timer, Users, Repeat, CalendarRange, type LucideIcon,
 } from "lucide-react";
 
-export interface NavItem { href: string; label: string; icon: LucideIcon; group: "Operate" | "Studio" | "Intelligence" | "Control" }
+export interface NavItem { href: string; label: string; icon: LucideIcon; group: "Workspace" | "Control" | "More" }
 
 export const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard, group: "Operate" },
-  { href: "/projects", label: "Projects", icon: FolderKanban, group: "Operate" },
-  { href: "/tasks", label: "Tasks", icon: ListTodo, group: "Operate" },
-  { href: "/time", label: "Time", icon: Timer, group: "Operate" },
-  { href: "/pipeline", label: "Pipeline", icon: Handshake, group: "Studio" },
-  { href: "/clients", label: "Clients", icon: Users, group: "Studio" },
-  { href: "/retainers", label: "Retainers", icon: Repeat, group: "Studio" },
-  { href: "/agents", label: "Agents", icon: Bot, group: "Intelligence" },
-  { href: "/reports", label: "Reports", icon: BarChart3, group: "Intelligence" },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, group: "Workspace" },
+  { href: "/projects", label: "Projects", icon: FolderKanban, group: "Workspace" },
+  { href: "/agents", label: "Agents", icon: Bot, group: "Workspace" },
+  { href: "/activity", label: "Activity", icon: Activity, group: "Workspace" },
+  { href: "/showcase", label: "Showcase", icon: Sparkles, group: "Workspace" },
+  { href: "/pipeline", label: "Pipeline", icon: Handshake, group: "Workspace" },
+  { href: "/future-projects", label: "Future projects", icon: CalendarRange, group: "Workspace" },
   { href: "/approvals", label: "Approvals", icon: ShieldCheck, group: "Control" },
-  { href: "/audit-logs", label: "Audit log", icon: ScrollText, group: "Control" },
-  { href: "/websites", label: "Websites", icon: Activity, group: "Control" },
   { href: "/settings", label: "Settings", icon: Settings, group: "Control" },
+  { href: "/tasks", label: "Tasks", icon: ListTodo, group: "More" },
+  { href: "/time", label: "Time", icon: Timer, group: "More" },
+  { href: "/clients", label: "Clients", icon: Users, group: "More" },
+  { href: "/retainers", label: "Retainers", icon: Repeat, group: "More" },
 ];
 
-// Phone bottom bar, exactly as master spec §12: Home · Projects · Agents · Reports · More.
-export const MOBILE_PRIMARY = ["/dashboard", "/projects", "/agents", "/reports"];
+// Phone bottom bar: Home · Projects · Agents · More (Approvals badge lives on More).
+export const MOBILE_PRIMARY = ["/dashboard", "/projects", "/agents"];

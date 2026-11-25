@@ -9,9 +9,9 @@ const secret = process.env.RAGI_E2E_TOTP_SECRET;
 setup("sign in with password + TOTP", async ({ page }) => {
   setup.skip(!email || !password || !secret, "RAGI_E2E_* not set");
   await page.goto("/login");
-  await page.getByLabel("Email").fill(email!);
-  await page.getByLabel("Password").fill(password!);
-  await page.getByRole("button", { name: /continue/i }).click();
+  await page.locator("#email").fill(email!);
+  await page.locator("#password").fill(password!);
+  await page.getByRole("button", { name: /^sign in$/i }).click();
   await page.waitForURL(/\/verify/);
   // Replay protection: wait for a fresh 30-second step if this one may already be used.
   if (Date.now() / 1000 % 30 > 25) await page.waitForTimeout(6000);

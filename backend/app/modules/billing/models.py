@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base, IdMixin, TimestampMixin
@@ -19,9 +19,7 @@ class BillingHandoff(IdMixin, TimestampMixin, Base):
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
     project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False)
     lines: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    draft_total: Mapped[object] = mapped_column(Numeric(18, 2), nullable=False)
     # draft → pending_approval → handed_to_omh → (issued | paid, reported by OMH) ; or rejected
     status: Mapped[str] = mapped_column(String(20), default="draft", nullable=False, index=True)
     approval_id: Mapped[str | None] = mapped_column(String(36))

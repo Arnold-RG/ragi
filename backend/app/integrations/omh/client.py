@@ -70,33 +70,3 @@ def reserve_budget(*, agent_id: str, project_id: str | None, run_id: str, estima
     except ValueError:  # pragma: no cover
         data = {}
     return parse_reservation_response(r.status_code, data if isinstance(data, dict) else {})  # pragma: no cover
-
-
-def finance_summary() -> dict:
-    """GET /api/v1/finance-summary?organization_id=arnovagroup (signed, empty body, finance:read)."""
-    s = get_settings()
-    if not s.omh_api_url:
-        return {"connected": False, "source": "omh",
-                "message": "Awaiting verified financial records — OMH is not connected yet."}
-    try:
-        assert_safe_service_url(s.omh_api_url)
-        headers = signed_headers(b"")
-    except AuthFailure as exc:
-        return {"connected": False, "source": "omh", "message": f"OMH call refused: {exc}"}
-    url = f"{s.omh_api_url.rstrip('/')}/api/v1/finance-summary"
-    try:
-        r = httpx.get(url, params={"organization_id": "arnovagroup"}, headers=headers, timeout=5)
-    except httpx.HTTPError as exc:
-        return {"connected": False, "source": "omh", "message": f"OMH unreachable ({exc.__class__.__name__})"}
-    try:
-        data = r.json() if r.content else {}
-    except ValueError:
-        data = {}
-    if r.status_code == 200 and isinstance(data, dict):
-        return {"connected": True, "source": "omh", **data}
-    detail = data.get("detail") if isinstance(data, dict) else None
-    if not isinstance(detail, str) or not detail:
-        detail = f"OMH returned {r.status_code}"
-    return {"connected": False, "source": "omh", "message": detail}
-
-

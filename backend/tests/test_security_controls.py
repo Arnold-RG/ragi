@@ -90,7 +90,7 @@ def test_csv_export_neutralises_project_names(world):
 
 def test_websocket_rejects_foreign_origin(world):
     c = login("op@ragi.local")
-    cookie = f"ragi_session={c.cookies.get('ragi_session')}"
+    cookie = f"__Host-ragi_session={c.cookies.get('__Host-ragi_session')}"
     with pytest.raises(WebSocketDisconnect) as exc:
         with c.websocket_connect("/ws/operations", headers={"origin": "https://evil.example", "cookie": cookie}) as ws:
             ws.receive_json()
@@ -108,7 +108,7 @@ def test_websocket_rejects_missing_session(world):
 def test_websocket_accepts_allowed_origin(world):
     c = login("op@ragi.local")
     # TestClient uses ws:// so it won't attach the Secure cookie by itself; pass it explicitly.
-    cookie = f"ragi_session={c.cookies.get('ragi_session')}"
+    cookie = f"__Host-ragi_session={c.cookies.get('__Host-ragi_session')}"
     with c.websocket_connect("/ws/operations", headers={"origin": ORIGIN, "cookie": cookie}) as ws:
         c.post("/api/v1/clients", json={"name": "Live Co"})
         msg = ws.receive_json()

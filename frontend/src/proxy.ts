@@ -4,12 +4,16 @@ import { NextResponse, type NextRequest } from "next/server";
  * Server-side gate: no session cookie → no workspace or portal HTML is served.
  * The API still authorises every request; this stops unauthenticated page loads early.
  */
+const AUTH = /^\/(login|verify|recovery|forgot|signup|setup|invite)(\/|$)/;
+
+function hasSession(req: NextRequest) {
+  return req.cookies.has("__Host-ragi_session") || req.cookies.has("ragi_session");
+}
+
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isAuthPage = /^\/(login|verify|recovery)(\/|$)/.test(pathname);
-  if (!isAuthPage && !req.cookies.has("ragi_session")) {
-    const url = new URL("/login", req.url);
-    return NextResponse.redirect(url);
+  if (!AUTH.test(pathname) && !hasSession(req)) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
   return NextResponse.next();
 }

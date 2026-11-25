@@ -74,7 +74,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Operations overview"
-        subtitle={<>{today}{s?.demo_data ? " · " : ""}{s?.demo_data && <DemoBadge />}</>}
+        subtitle={<>{today} · Money and estimates live in <OpenInMoneyHub />{s?.demo_data ? " · " : ""}{s?.demo_data && <DemoBadge />}</>}
         actions={
           <>
             <Link href="/approvals" className="btn">{s?.approvals.pending ? `${s.approvals.pending} to review` : "Approvals"}</Link>
