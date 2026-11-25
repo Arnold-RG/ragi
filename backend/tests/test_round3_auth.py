@@ -60,18 +60,21 @@ def test_lockout_response_is_the_same_for_unknown_and_known_emails(world):
 def test_registration_is_closed_without_setup_token(world):
     c = make_client()
     r = c.post("/api/v1/auth/register", json={
-        "email": "new@ragi.local", "password": "correct-horse-battery", "full_name": "New Owner",
+        "email": "new@ragi.local", "username": "newowner", "password": "correct-horse-battery", "full_name": "New Owner",
     })
     assert r.status_code == 403
     cfg = c.get("/api/v1/auth/config").json()
     assert cfg["registration_mode"] == "closed"
-    assert cfg["providers"] == {"google": False, "apple": False}
-    assert cfg["password_reset"] == "cli"
+    assert cfg["providers"] == {"github": False}
+    assert cfg["password_reset"] == "email"
+    assert cfg["private"] is False
+    assert cfg["signup_enabled"] is False
 
 
 def test_oauth_start_disabled_without_client_id():
     c = make_client()
-    assert c.post("/api/v1/auth/oauth/google/start").status_code == 503
+    assert c.post("/api/v1/auth/oauth/google/start").status_code == 404
+    assert c.post("/api/v1/auth/oauth/github/start").status_code == 503
 
 
 GENERIC_INVITE = "This invite can’t be used. Ask the owner for a new one."
@@ -101,14 +104,14 @@ def test_invite_works_once_and_failures_are_generic(world):
         assert c.cookies.get("__Host-ragi_invite")
 
         mismatch = c.post("/api/v1/auth/register", json={
-            "email": "other@ragi.local", "password": "correct-horse-battery",
+            "email": "other@ragi.local", "username": "otheruser", "password": "correct-horse-battery",
             "full_name": "Other", "invite_token": raw,
         })
         assert mismatch.status_code == 403
         assert mismatch.json()["detail"] == GENERIC_INVITE
 
         ok = c.post("/api/v1/auth/register", json={
-            "email": "new@ragi.local", "password": "correct-horse-battery",
+            "email": "new@ragi.local", "username": "newoperator", "password": "correct-horse-battery",
             "full_name": "New Operator", "invite_token": raw,
         })
         assert ok.status_code == 200, ok.text
@@ -118,7 +121,7 @@ def test_invite_works_once_and_failures_are_generic(world):
         assert me.json()["email"] == "new@ragi.local"
 
         reuse = make_client().post("/api/v1/auth/register", json={
-            "email": "new@ragi.local", "password": "correct-horse-battery",
+            "email": "new@ragi.local", "username": "newoperator", "password": "correct-horse-battery",
             "full_name": "New Operator", "invite_token": raw,
         })
         assert reuse.status_code == 403
@@ -143,7 +146,7 @@ def test_invite_is_rejected_when_registration_is_closed(world):
         assert preview.status_code == 403
         assert preview.json()["detail"] == GENERIC_INVITE
         reg = c.post("/api/v1/auth/register", json={
-            "email": "late@ragi.local", "password": "correct-horse-battery",
+            "email": "late@ragi.local", "username": "lateuser", "password": "correct-horse-battery",
             "full_name": "Late", "invite_token": raw,
         })
         assert reg.status_code == 403

@@ -103,13 +103,23 @@ def _rate_limits(db: Session, email: str, ip: str) -> None:
         raise LoginError(GENERIC_LOCK, 429, retry)
 
 
-def authenticate(db: Session, email: str, password: str, request: Request) -> tuple[User, str, UserSession]:
+def _lookup_user(db: Session, identifier: str) -> tuple[str, User | None]:
+    raw = (identifier or "").strip()
+    if "@" in raw:
+        key = raw.lower()
+        return key, db.scalar(select(User).where(func.lower(User.email) == key))
+    key = raw.lower()
+    return key, db.scalar(select(User).where(func.lower(User.username) == key))
+
+
+def authenticate(db: Session, identifier: str, password: str, request: Request) -> tuple[User, str, UserSession]:
     settings = get_settings()
     ip = client_ip(request)
-    key = _email_key(email)
+    key, user = _lookup_user(db, identifier)
+    if not key:
+        raise LoginError(GENERIC_LOGIN)
     _rate_limits(db, key, ip)
 
-    user = db.scalar(select(User).where(func.lower(User.email) == key))
     now = datetime.now(UTC)
 
     def fail(existing: User | None) -> None:
@@ -126,8 +136,8 @@ def authenticate(db: Session, email: str, password: str, request: Request) -> tu
         burn_password_check(password)
         fail(None)
 
-    if not user.is_active or not verify_password(user.password_hash, password):
-        if not user.is_active:
+    if not user.is_active or not user.password_hash or not verify_password(user.password_hash, password):
+        if not user.is_active or not user.password_hash:
             burn_password_check(password)
         fail(user)
 

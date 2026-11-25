@@ -33,7 +33,7 @@ function SetupForm() {
     setBusy(true); setError(null);
     try {
       const r = await api<{ mfa_enrolment_required: boolean }>("/auth/register", {
-        json: { setup_token: token, email, password, full_name: fullName },
+        json: { setup_token: token, username, email, password, full_name: fullName },
       });
       router.push(r.mfa_enrolment_required ? "/verify?enrol=1" : "/dashboard");
     } catch (err) {
@@ -67,6 +67,10 @@ function SetupForm() {
         <div>
           <label className="label" htmlFor="name">Full name</label>
           <input id="name" className="input" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        </div>
+        <div>
+          <label className="label" htmlFor="username">Username</label>
+          <input id="username" className="input" type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={32} pattern="[a-z][a-z0-9_]{2,31}" title="3–32 characters: start with a letter, then letters, numbers or underscores" />
         </div>
         <div>
           <label className="label" htmlFor="email">Email</label>

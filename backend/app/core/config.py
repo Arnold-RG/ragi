@@ -24,13 +24,13 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:3410"
     forwarded_allow_ips: str = "127.0.0.1,::1"
     registration_mode: str = "closed"  # closed | invite | open
+    # Required in production when registration_mode is open (explicitly confirmed).
+    registration_open_confirmed: bool = False
     ragi_owner_setup_token: str = ""
-    google_client_id: str = ""
-    google_client_secret: str = ""
-    apple_client_id: str = ""  # Services ID
-    apple_team_id: str = ""
-    apple_key_id: str = ""
-    apple_private_key: str = ""  # PEM contents or empty when unset
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    resend_api_key: str = ""
+    mail_from: str = ""
     mfa_pending_minutes: int = 10
     idle_timeout_minutes_privileged: int = 30
     idle_timeout_minutes: int = 120
@@ -100,10 +100,8 @@ class Settings(BaseSettings):
                 problems.append("FIELD_ENCRYPTION_KEY is required")
             if self.api_docs_enabled:
                 problems.append("API_DOCS_ENABLED must be false")
-            if self.registration_mode == "open":
-                problems.append("REGISTRATION_MODE=open requires an explicit operator confirmation")
-            if not self.google_client_id and not self.apple_client_id:
-                pass  # providers stay disabled until client IDs exist
+            if self.registration_mode == "open" and not self.registration_open_confirmed:
+                problems.append("REGISTRATION_MODE=open requires REGISTRATION_OPEN_CONFIRMED=true")
             if problems:
                 raise ValueError("Refusing to start outside development: " + "; ".join(problems))
         return self

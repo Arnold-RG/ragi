@@ -6,6 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core import oauth_github, usernames
+from app.modules.identity import password_reset as pwreset
+from app.modules.identity.models import AuthIdentity, InstanceSetting, Organization, User
 from app.core.crypto import EncryptionUnavailable, encrypt
 from app.core.passwords import hibp_pwned_count, validate_password
 from app.core.recovery import consume_code, issue_codes, remaining_count
@@ -15,7 +18,6 @@ from app.modules.audit.service import record
 from app.modules.identity import invites, schemas
 from app.modules.identity.cookies import clear_invite_cookie, clear_session_cookie, read_invite_token, set_invite_cookie, set_session_cookie
 from app.modules.identity.deps import _check_csrf, current_user, get_any_session, get_enrolment_session, require_recent_auth
-from app.modules.identity.models import InstanceSetting, Organization, User
 from app.modules.identity.service import (
     LoginError, MfaError, authenticate, check_mfa_code, revoke, revoke_all_other, rotate_session, start_session,
 )
@@ -42,8 +44,10 @@ def auth_config(db: Session = Depends(get_db)):
     return schemas.AuthConfig(
         registration_mode=s.registration_mode,
         owner_setup=owner_setup,
-        providers={"google": bool(s.google_client_id), "apple": bool(s.apple_client_id)},
-        password_reset="cli",
+        providers={"github": bool(s.github_client_id)},
+        password_reset="email",
+        private=not s.is_development,
+        signup_enabled=s.is_development and s.registration_mode == "open",
     )
 
 
@@ -51,13 +55,13 @@ def auth_config(db: Session = Depends(get_db)):
 def login(body: schemas.LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     _check_csrf(request)
     try:
-        user, token, sess = authenticate(db, body.email, body.password, request)
+        user, token, sess = authenticate(db, body.login_id(), body.password, request)
     except LoginError as exc:
         _raise_login(exc)
     set_session_cookie(response, token, max_age=_cookie_age(sess))
     full = not sess.mfa_pending and not sess.enrolment_required
     return schemas.LoginResponse(mfa_required=sess.mfa_pending, mfa_enrolment_required=sess.enrolment_required,
-                                 user=schemas.UserOut.model_validate(user) if full else None)
+                                 user=schemas.UserOut.from_user(user) if full else None)
 
 
 @router.post("/register", response_model=schemas.LoginResponse)
@@ -72,6 +76,8 @@ def register(body: schemas.RegisterRequest, request: Request, response: Response
     setup_flow = token_ok and not bootstrapped
     invite_flow = (not setup_flow) and s.registration_mode == "invite" and bool(invite_raw)
     open_flow = (not setup_flow) and (not invite_flow) and s.registration_mode == "open"
+    if not setup_flow and not s.is_development:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This app is private.")
     if not setup_flow and not invite_flow and not open_flow:
         if invite_raw:
             raise HTTPException(status.HTTP_403_FORBIDDEN, invites.GENERIC)
@@ -79,6 +85,10 @@ def register(body: schemas.RegisterRequest, request: Request, response: Response
                             "Registration is closed. Ask the owner for an invite.")
     if setup_flow and len(s.ragi_owner_setup_token) < 32:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Owner setup is not configured correctly")
+    try:
+        username = usernames.validate_username(body.username)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
     try:
         validate_password(body.password, email=body.email, name=body.full_name)
     except ValueError as exc:
@@ -96,13 +106,15 @@ def register(body: schemas.RegisterRequest, request: Request, response: Response
         invite_flow = True
     if db.scalar(select(User).where(func.lower(User.email) == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
+    if not usernames.is_available(db, User, username):
+        raise HTTPException(status.HTTP_409_CONFLICT, "That username is not available")
     org = db.scalar(select(Organization).order_by(Organization.created_at))
     if org is None:
         org = Organization(slug="arnovagroup", name="Arnova Group")
         db.add(org)
         db.flush()
     from app.core.security import hash_password
-    user = User(organization_id=org.id, email=email, full_name=body.full_name.strip(),
+    user = User(organization_id=org.id, email=email, username=username, full_name=body.full_name.strip(),
                 role=role, password_hash=hash_password(body.password))
     db.add(user)
     if setup_flow:
@@ -121,12 +133,13 @@ def register(body: schemas.RegisterRequest, request: Request, response: Response
     if invite_flow:
         record(db, user, "auth.invite.accepted", "user", user.id, request=request,
                detail={"invite_id": invite_row.id, "role": role})
+    codes = issue_codes(db, user.id)
     db.commit()
     set_session_cookie(response, token, max_age=_cookie_age(sess))
     if invite_flow:
         clear_invite_cookie(response)
     return schemas.LoginResponse(mfa_required=False, mfa_enrolment_required=sess.enrolment_required,
-                                 user=None)
+                                 recovery_codes=codes, user=None)
 
 
 def _tokens_match(given: str, expected: str) -> bool:
@@ -142,7 +155,7 @@ def verify(body: schemas.VerifyRequest, request: Request, response: Response,
     sess, user = found
     if not sess.mfa_pending:
         return schemas.LoginResponse(mfa_required=False, mfa_enrolment_required=sess.enrolment_required,
-                                     user=None if sess.enrolment_required else schemas.UserOut.model_validate(user))
+                                     user=None if sess.enrolment_required else schemas.UserOut.from_user(user))
     try:
         check_mfa_code(db, sess, user, body.code, request)
     except MfaError as exc:
@@ -155,7 +168,7 @@ def verify(body: schemas.VerifyRequest, request: Request, response: Response,
     record(db, user, "auth.login", "user", user.id, request=request, detail={"mfa": True})
     db.commit()
     set_session_cookie(response, token, max_age=_cookie_age(fresh))
-    return schemas.LoginResponse(mfa_required=False, user=schemas.UserOut.model_validate(user))
+    return schemas.LoginResponse(mfa_required=False, user=schemas.UserOut.from_user(user))
 
 
 @router.post("/mfa/recovery", response_model=schemas.LoginResponse)
@@ -172,7 +185,7 @@ def verify_recovery(body: schemas.VerifyRequest, request: Request, response: Res
            detail={"remaining": remaining_count(db, user.id)})
     db.commit()
     set_session_cookie(response, token, max_age=_cookie_age(fresh))
-    return schemas.LoginResponse(mfa_required=False, user=schemas.UserOut.model_validate(user))
+    return schemas.LoginResponse(mfa_required=False, user=schemas.UserOut.from_user(user))
 
 
 @router.post("/logout", status_code=204)
@@ -231,28 +244,116 @@ def mfa_enable(body: schemas.VerifyRequest, request: Request, response: Response
     db.commit()
     set_session_cookie(response, token, max_age=_cookie_age(fresh))
     return schemas.LoginResponse(mfa_required=False, recovery_codes=codes,
-                                 user=schemas.UserOut.model_validate(user))
+                                 user=schemas.UserOut.from_user(user))
 
 
-@router.post("/oauth/{provider}/start")
-def oauth_start(provider: str, request: Request):
+@router.post("/oauth/github/start", response_model=schemas.OAuthStartResponse)
+def oauth_github_start(request: Request, response: Response):
     _check_csrf(request)
-    if provider not in {"google", "apple"}:
-        raise HTTPException(404, "Unknown provider")
     s = get_settings()
-    enabled = (provider == "google" and s.google_client_id) or (provider == "apple" and s.apple_client_id)
-    if not enabled:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
-                            f"{provider.title()} sign-in is not configured yet")
-    raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
-                        f"{provider.title()} sign-in is not configured yet")
+    if not s.github_client_id or not s.github_client_secret:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "GitHub sign-in is not configured yet")
+    try:
+        _state, cookie, url = oauth_github.new_pkce_state()
+    except RuntimeError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    from app.modules.identity.cookies import set_oauth_cookie
+    set_oauth_cookie(response, cookie)
+    return schemas.OAuthStartResponse(authorization_url=url)
+
+
+@router.post("/oauth/github/callback", response_model=schemas.LoginResponse)
+def oauth_github_callback(body: schemas.OAuthCallbackIn, request: Request, response: Response,
+                          db: Session = Depends(get_db)):
+    _check_csrf(request)
+    from app.modules.identity.cookies import clear_oauth_cookie, read_oauth_cookie
+    s = get_settings()
+    if not s.github_client_id or not s.github_client_secret:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "GitHub sign-in is not configured yet")
+    verifier = oauth_github.parse_cookie(read_oauth_cookie(request) or "", body.state)
+    clear_oauth_cookie(response)
+    if not verifier:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "GitHub sign-in could not be completed")
+    try:
+        result = oauth_github.exchange(body.code, verifier)
+    except Exception as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "GitHub sign-in could not be completed") from exc
+    profile = result.get("profile") or {}
+    if not oauth_github.is_allowed_github_account(profile):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This app is private.")
+    primary = result.get("primary_email") or {}
+    email = (primary.get("email") or "").strip().lower()
+    if not email or not primary.get("verified"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "GitHub sign-in needs a verified primary email")
+    subject = str(profile.get("id") or "")
+    identity = db.scalar(select(AuthIdentity).where(AuthIdentity.provider == "github", AuthIdentity.subject == subject))
+    owner = db.scalar(select(User).where(User.role == "owner"))
+    if owner is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This app is private.")
+    user = db.get(User, identity.user_id) if identity else owner
+    if user is None or user.role != "owner" or (identity and identity.user_id != owner.id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This app is private.")
+    if not identity:
+        db.add(AuthIdentity(user_id=owner.id, provider="github", subject=subject, email=email, email_verified=True))
+        user = owner
+    token, sess = start_session(db, user, request, method="github")
+    db.commit()
+    set_session_cookie(response, token, max_age=_cookie_age(sess))
+    full = not sess.mfa_pending and not sess.enrolment_required
+    return schemas.LoginResponse(mfa_required=sess.mfa_pending, mfa_enrolment_required=sess.enrolment_required,
+                                 user=schemas.UserOut.from_user(user) if full else None)
+
+
+@router.post("/password/forgot", status_code=202)
+def password_forgot(body: schemas.PasswordResetRequest, request: Request, db: Session = Depends(get_db)):
+    _check_csrf(request)
+    try:
+        return pwreset.request_code(db, body.login_id(), request)
+    except pwreset.ResetError as exc:
+        headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
+        raise HTTPException(exc.status, str(exc), headers=headers) from exc
+
+
+@router.post("/password/reset")
+def password_reset_confirm(body: schemas.PasswordResetConfirm, request: Request, db: Session = Depends(get_db)):
+    _check_csrf(request)
+    try:
+        pwreset.confirm_code(db, body.identifier, body.code, body.password, request)
+    except pwreset.ResetError as exc:
+        headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
+        raise HTTPException(exc.status, str(exc), headers=headers) from exc
+    return {"status": "ok"}
+
+
+@router.post("/password/recovery")
+def password_reset_recovery(body: schemas.PasswordRecoveryReset, request: Request, db: Session = Depends(get_db)):
+    _check_csrf(request)
+    try:
+        pwreset.confirm_recovery(db, body.identifier, body.recovery_code, body.password, request)
+    except pwreset.ResetError as exc:
+        headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
+        raise HTTPException(exc.status, str(exc), headers=headers) from exc
+    return {"status": "ok"}
+
+
+@router.post("/password/set")
+def password_set(body: schemas.PasswordSetIn, request: Request, response: Response,
+                 db: Session = Depends(get_db), found=Depends(require_recent_auth())):
+    _check_csrf(request)
+    sess, user = found
+    if user.role != "owner":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This app is private.")
+    try:
+        pwreset.set_password(db, user, body.password, request)
+    except pwreset.ResetError as exc:
+        raise HTTPException(exc.status, str(exc)) from exc
+    return {"status": "ok", "user": schemas.UserOut.from_user(user)}
 
 
 @router.post("/recovery", status_code=202)
-def recovery(body: schemas.RecoveryRequest):
-    """No email provider is connected. The owner resets passwords with a CLI command."""
-    return {"status": "accepted", "delivery": "cli",
-            "message": "Ask the owner to reset your password. They run a command on the server."}
+def recovery(body: schemas.PasswordResetRequest, request: Request, db: Session = Depends(get_db)):
+    """Backward-compatible alias of /password/forgot."""
+    return password_forgot(body, request, db)
 
 
 

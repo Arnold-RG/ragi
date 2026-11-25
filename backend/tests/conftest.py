@@ -79,7 +79,10 @@ class World:
         db.commit()
 
     def user(self, email, role, org=None, mfa=False, client_id=None):
-        u = User(organization_id=(org or self.org).id, email=email, full_name=email.split("@")[0].title(), role=role,
+        local, _, domain = email.partition("@")
+        username = f"{local}_{domain.split('.')[0]}"[:32].lower()
+        u = User(organization_id=(org or self.org).id, email=email, username=username,
+                 full_name=email.split("@")[0].title(), role=role,
                  password_hash=hash_password(PASSWORD), client_id=client_id)
         if mfa:
             u.mfa_secret_enc, u.mfa_enabled = encrypt(self.totp_secret), True

@@ -47,3 +47,18 @@ def set_invite_cookie(response: Response, token: str, *, max_age: int = 600) -> 
 
 def clear_invite_cookie(response: Response) -> None:
     response.delete_cookie(INVITE_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+
+
+OAUTH_COOKIE = "__Host-ragi_oauth"
+
+
+def read_oauth_cookie(request: Request) -> str | None:
+    return request.cookies.get(OAUTH_COOKIE)
+
+
+def set_oauth_cookie(response: Response, value: str, *, max_age: int = 600) -> None:
+    response.set_cookie(OAUTH_COOKIE, value, max_age=max_age, **HOST_ATTRS)
+
+
+def clear_oauth_cookie(response: Response) -> None:
+    response.delete_cookie(OAUTH_COOKIE, path="/", secure=True, httponly=True, samesite="lax")

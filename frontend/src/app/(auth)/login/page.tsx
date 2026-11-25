@@ -8,14 +8,14 @@ import { api, ApiError } from "@/lib/api";
 interface AuthConfig {
   registration_mode: string;
   owner_setup: boolean;
-  providers: { google: boolean; apple: boolean };
+  providers: { github?: boolean }; signup_enabled?: boolean; private?: boolean;
 }
 
 const GENERIC = "Email or password is incorrect";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     api<AuthConfig>("/auth/config").then(setCfg).catch(() => setCfg({
-      registration_mode: "closed", owner_setup: false, providers: { google: false, apple: false },
+      registration_mode: "closed", owner_setup: false, providers: { github: false },
     }));
   }, []);
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true); setError(null);
     try {
-      const r = await api<{ mfa_required: boolean; mfa_enrolment_required: boolean; user: { role: string } | null }>("/auth/login", { json: { email, password } });
+      const r = await api<{ mfa_required: boolean; mfa_enrolment_required: boolean; user: { role: string } | null }>("/auth/login", { json: { identifier, password } });
       if (r.mfa_enrolment_required) router.push("/verify?enrol=1");
       else if (r.mfa_required) router.push("/verify");
       else router.push(r.user?.role === "client" ? "/portal" : "/dashboard");
@@ -45,15 +45,15 @@ export default function LoginPage() {
   return (
     <>
       <h1 className="font-display text-3xl font-medium tracking-tight">Sign in to RAGI</h1>
-      <p className="mt-2 text-sm" style={{ color: "var(--text2)" }}>Welcome back. Use your email or a connected account. This sign-in is only for RAGI.</p>
+      <p className="mt-2 text-sm" style={{ color: "var(--text2)" }}>Welcome back. Use your email, username, or GitHub. This sign-in is only for RAGI.</p>
       <div className="mt-8">
         <ProviderButtons enabled={cfg?.providers ?? { google: false, apple: false }} />
       </div>
       <Divider />
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="label" htmlFor="email">Email</label>
-          <input id="email" className="input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label className="label" htmlFor="identifier">Email or username</label>
+          <input id="identifier" className="input" type="text" autoComplete="username" value={identifier} onChange={(e) => setIdentifier(e.target.value)} required />
         </div>
         <div>
           <label className="label flex items-center justify-between" htmlFor="password">
@@ -69,7 +69,11 @@ export default function LoginPage() {
         <button className="btn btn-primary h-12 w-full" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
       </form>
       <p className="mt-6 flex items-start gap-2 text-xs" style={{ color: "var(--text2)" }}>
-        Accounts are by invite only. Have an invite link? Open it to create your account.
+        {cfg?.signup_enabled ? (
+          <>Need an account? <Link href="/signup" className="underline">Create account</Link>.</>
+        ) : (
+          <>This app is private and owner-only.</>
+        )}
         {cfg?.owner_setup && <>{" "}If you are setting this instance up, <Link href="/setup" className="underline">use the owner setup form</Link>.</>}
       </p>
     </>

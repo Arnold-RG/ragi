@@ -11,6 +11,7 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
   { key: "Content-Security-Policy", value: "default-src 'self'; frame-ancestors 'none'; frame-src 'self' https://arnold-rg.github.io https://arnova-africa-preview.onrender.com https://twodaymovie-site.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'" },
 ];
 
