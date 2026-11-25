@@ -59,11 +59,15 @@ function SetupForm() {
         This is a one-time setup for this RAGI instance. You’ll enrol two-step verification on the next screen. We never collect a password for you — you choose it here.
       </p>
       <form onSubmit={submit} className="mt-8 space-y-4">
+        {ready && token.length >= 32 ? (
+          <input type="hidden" name="setup_token" value={token} autoComplete="off" />
+        ) : ready ? (
         <div>
           <label className="label" htmlFor="token">Setup token</label>
           <input id="token" className="input" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} required minLength={32} />
           <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>The one-time token from the server environment. It is at least 32 characters.</p>
         </div>
+        ) : null}
         <div>
           <label className="label" htmlFor="name">Full name</label>
           <input id="name" className="input" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { AuthenticatorQr } from "@/components/auth/AuthenticatorQr";
 
 interface SessionState { mfa_pending: boolean; enrolment_required: boolean; email: string; role: string; recovery_remaining?: number }
 
@@ -77,9 +78,13 @@ export default function VerifyPage() {
         <button className="btn btn-primary mt-8 h-12 w-full" onClick={startSetup}>Generate my secret</button>
       )}
       {enrol && setup && (
-        <div className="mt-6 space-y-2 rounded-2xl border p-4" style={{ borderColor: "var(--border)", background: "var(--s2)" }}>
-          <div className="eyebrow">Add this key to your authenticator</div>
-          <code className="num block break-all text-sm">{setup.secret}</code>
+        <div className="mt-6 space-y-4 rounded-2xl border p-4" style={{ borderColor: "var(--border)", background: "var(--s2)" }}>
+          <div className="eyebrow">Scan this QR with your authenticator app</div>
+          <AuthenticatorQr otpauthUri={setup.otpauth_uri} />
+          <div>
+            <div className="text-xs" style={{ color: "var(--faint)" }}>Can’t scan? Enter this key</div>
+            <code className="num mt-1 block break-all text-sm">{setup.secret}</code>
+          </div>
           <a className="text-xs underline" href={setup.otpauth_uri}>Open in authenticator app</a>
         </div>
       )}
