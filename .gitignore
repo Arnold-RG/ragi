@@ -41,3 +41,7 @@ frontend/e2e/.auth/
 *.tsbuildinfo
 next-env.d.ts
 secrets/
+
+# Apple Sign In / APNs keys and Google OAuth client-secret files
+*.p8
+client_secret*.json
