@@ -1,149 +1,237 @@
 "use client";
-import { AlertTriangle, ArrowUpRight, Bot, Clock, Handshake, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Bot, CheckCircle2, Folder, Shield, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 import useSWR from "swr";
 import { LiveActivity } from "@/components/dashboard/LiveActivity";
 import { ThroughputChart } from "@/components/dashboard/ThroughputChart";
-import { useMe } from "@/components/layout/AuthProvider";
-import { Card, CardTitle, DemoBadge, Empty, PageHeader, Progress, Skeleton, Stat, StatusChip } from "@/components/ui/primitives";
+import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
+import { AlarmBanner } from "@/components/ui/AlarmBanner";
+import { KpiCard } from "@/components/ui/KpiCard";
+import { DemoBadge, Empty, PageHeader, Progress, Skeleton, StatusChip } from "@/components/ui/primitives";
 import { fetcher } from "@/lib/api";
-import { formatDate, formatMinutes, formatMoney, greeting } from "@/lib/format";
-import type { Summary } from "@/lib/types";
+import { humanize, relativeTime } from "@/lib/format";
+import type { Agent, AgentRun, Project, Summary } from "@/lib/types";
+
+const STATUS_COLOR: Record<string, string> = {
+  active: "var(--c1)", upcoming: "var(--c5)", paused: "var(--bar-warning)",
+  completed: "var(--c4)", failed: "var(--danger)", unverified: "var(--c3)",
+};
+const STATUS_ORDER = ["active", "upcoming", "paused", "completed", "failed", "unverified"] as const;
+
+function isToday(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
+function ProjectsByStatus({ byStatus, total }: { byStatus: Record<string, number>; total: number }) {
+  const known = new Set<string>(STATUS_ORDER);
+  const rows: { id: string; n: number }[] = [
+    ...STATUS_ORDER.map((id) => ({ id, n: byStatus[id] ?? 0 })),
+    ...Object.entries(byStatus).filter(([id]) => !known.has(id)).map(([id, n]) => ({ id, n })),
+  ].filter((r) => r.n > 0);
+  const denom = total || 1;
+  return (
+    <>
+      <div className="mb-2.5 flex overflow-hidden rounded-[7px]" style={{ height: 14, gap: 3 }} role="img" aria-label="Projects by status">
+        {rows.map((r) => <i key={r.id} style={{ flex: r.n, background: STATUS_COLOR[r.id] ?? "var(--c1)" }} title={`${humanize(r.id)}: ${r.n}`} />)}
+      </div>
+      {rows.map((r) => (
+        <div key={r.id} className="flex items-center gap-2.5 border-b text-sm" style={{ height: 31, borderColor: "var(--border)" }}>
+          <i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: STATUS_COLOR[r.id] ?? "var(--c1)" }} />
+          <span className="flex-1">{humanize(r.id)}</span>
+          <span className="num font-bold">{r.n}</span>
+          <span className="num w-11 text-right text-xs" style={{ color: "var(--faint)" }}>{Math.round(r.n / denom * 100)}%</span>
+        </div>
+      ))}
+    </>
+  );
+}
 
 export default function DashboardPage() {
-  const me = useMe();
   const { data: s } = useSWR<Summary>("/dashboard/summary", fetcher, { refreshInterval: 60000 });
-  const first = me?.full_name.split(" ")[0] ?? "";
+  const { data: projects } = useSWR<Project[]>("/projects", fetcher);
+  const { data: agents } = useSWR<Agent[]>("/agents", fetcher);
+  const { data: runs } = useSWR<AgentRun[]>("/agent-runs", fetcher);
+  const today = useMemo(() => new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }), []);
+
+  const inProgress = s?.projects.active ?? 0;
+  const finished = s?.projects.completed ?? 0;
+  const failedProjects = (projects ?? []).filter((p) => p.status === "failed").length;
+  const pausedProjects = (projects ?? []).filter((p) => p.status === "paused").length;
+  const blockedTasks = s?.tasks.by_status?.blocked ?? 0;
+  const failedBlocked = failedProjects + pausedProjects + blockedTasks;
+  const todayRuns = (runs ?? []).filter((r) => isToday(r.created_at));
+  const sparkDone = s?.tasks.throughput_14d.map((d) => d.completed) ?? [];
+  const sparkCreated = s?.tasks.throughput_14d.map((d) => d.created) ?? [];
+
+  const inMotion = (projects ?? []).filter((p) => p.status === "active" || p.status === "paused" || p.status === "failed");
+  const byStatus = s?.projects.by_status ?? {};
+  const projectTotal = s?.projects.total ?? 0;
+
   return (
     <>
       <PageHeader
-        eyebrow="Operations · Arnova Group"
-        title={`${greeting()}, ${first}`}
-        subtitle={<>Everything across the studio in one view: delivery, pipeline, time, retainers and the agent workforce. {s?.demo_data && <DemoBadge />}</>}
-        actions={<><Link href="/tasks" className="btn">Open tasks</Link><Link href="/pipeline" className="btn btn-primary">Pipeline <ArrowUpRight size={15} /></Link></>}
+        title="Operations overview"
+        subtitle={<>{today}{s?.demo_data ? " · " : ""}{s?.demo_data && <DemoBadge />}</>}
+        actions={
+          <>
+            <Link href="/approvals" className="btn">{s?.approvals.pending ? `${s.approvals.pending} to review` : "Approvals"}</Link>
+            <Link href="/projects" className="btn btn-primary">Open projects</Link>
+          </>
+        }
       />
       {!s ? (
         <div className="grid gap-4 md:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}</div>
       ) : (
-        <div className="space-y-4">
+        <>
           {s.agents.emergency_stop && (
-            <div className="flex items-start gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
-              <ShieldAlert size={18} className="mt-0.5 shrink-0 text-warning" />
-              <div><span className="font-medium">Agent emergency stop is on.</span> <span className="text-muted">AGENTS_ENABLED=false — no agent can run, write to repositories or deploy. Repository writes and production deploys are also off.</span></div>
-            </div>
+            <AlarmBanner
+              message="Agent emergency stop is on — all dispatches are blocked."
+              count={s.agents.runs_blocked}
+              action={<Link href="/agents" className="btn">Review stop</Link>}
+            />
           )}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Card><Stat label="Active projects" value={s.projects.active} hint={`${s.projects.upcoming} upcoming · ${s.projects.completed} completed`} /></Card>
-            <Card delay={0.05}><Stat label="Open tasks" value={s.tasks.open} hint={s.tasks.overdue ? <span className="text-danger">{s.tasks.overdue} overdue</span> : "Nothing overdue"} /></Card>
-            <Card delay={0.1}><Stat label="Billable this month" value={formatMinutes(s.time.billable_minutes)} hint={`${formatMinutes(s.time.non_billable_minutes)} non-billable`} /></Card>
-            <Card delay={0.15}><Stat label="Awaiting your approval" value={s.approvals.pending} tone={s.approvals.pending ? "var(--arn-warning)" : undefined} hint={<Link href="/approvals" className="hover:text-ink">Review queue →</Link>} /></Card>
+
+          <div className="kpis">
+            <KpiCard hero label="In progress" value={inProgress} icon={<Folder size={14} />}
+              series={sparkCreated} period={`${s.projects.upcoming} upcoming`}
+              badge={inProgress > 0 ? <span className="pill ok">Active</span> : undefined} />
+            <KpiCard label="Finished" value={finished} icon={<CheckCircle2 size={14} />}
+              series={sparkDone} sparkColor="var(--c4)" period={`${s.projects.total} projects in all`} />
+            <KpiCard label="Failed / blocked" value={failedBlocked} icon={<ShieldAlert size={14} />}
+              sparkColor="var(--danger)"
+              period={[
+                failedProjects ? `${failedProjects} failed` : null,
+                pausedProjects ? `${pausedProjects} paused` : null,
+                blockedTasks ? `${blockedTasks} blocked tasks` : null,
+              ].filter(Boolean).join(" · ") || "None right now"}
+              badge={failedBlocked > 0 ? <span className="pill err">Needs attention</span> : undefined} />
+            <KpiCard label="Agent tasks today" value={runs ? todayRuns.length : "—"} icon={<Bot size={14} />}
+              sparkColor="var(--c3)"
+              period={runs && todayRuns.length
+                ? `${todayRuns.filter((r) => r.status === "failed" || r.status === "blocked").length} failed or blocked today`
+                : "No agent runs recorded today"}
+              badge={s.approvals.pending > 0 ? <span className="pill warn">{s.approvals.pending} approvals</span> : undefined} />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2" delay={0.1}>
-              <CardTitle action={<span className="text-xs text-muted">last 14 days</span>}>Task throughput</CardTitle>
-              <ThroughputChart data={s.tasks.throughput_14d} />
-            </Card>
-            <Card delay={0.15}>
-              <CardTitle action={<Link href="/pipeline" className="text-xs text-muted hover:text-ink">Open</Link>}><span className="flex items-center gap-2"><Handshake size={15} /> Pipeline</span></CardTitle>
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between"><span className="text-sm text-muted">Open leads</span><span className="num font-display text-2xl">{s.pipeline.open}</span></div>
-                <div className="flex items-baseline justify-between"><span className="text-sm text-muted">Won</span><span className="num text-lg">{s.pipeline.won}</span></div>
-                <div className="border-t border-line pt-3">
-                  <div className="eyebrow mb-2">Open value · per currency, never summed</div>
-                  {Object.entries(s.pipeline.value_by_currency).length === 0 ? <div className="text-sm text-muted">—</div> :
-                    Object.entries(s.pipeline.value_by_currency).map(([c, v]) => <div key={c} className="num text-sm">{formatMoney(v, c)}</div>)}
-                </div>
+          <div className="flex flex-col gap-4 lg:flex-row">
+            <div className="card flex-1 p-4" style={{ flex: 1.2 }}>
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className="m-0 text-sm font-bold">Project progress</h3>
+                <span className="faint text-xs">Active, paused and failed</span>
+                <span className="flex-1" />
+                <Link href="/projects" className="linkish">All projects</Link>
               </div>
-            </Card>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2" delay={0.1}>
-              <CardTitle action={<Link href="/projects" className="text-xs text-muted hover:text-ink">All projects</Link>}>Active delivery</CardTitle>
-              {s.active_projects.length === 0 ? <Empty title="No active projects" /> : (
-                <ul className="divide-y divide-line">
-                  {s.active_projects.map((p) => (
-                    <li key={p.id}>
-                      <Link href={`/projects/${p.id}`} className="grid grid-cols-[1fr_auto] items-center gap-3 py-3 md:grid-cols-[1.6fr_1fr_auto]">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 truncate text-sm font-medium">{p.name} <DemoBadge show={p.is_demo} />{!p.verified && !p.is_demo && <span className="chip ">unverified</span>}</div>
-                          <div className="truncate text-xs text-muted">{p.client_name ?? "Arnova Group"} · due {formatDate(p.due_date)}</div>
-                        </div>
-                        <div className="hidden items-center gap-3 md:flex"><Progress value={p.progress} label={`${p.name} progress`} /><span className="num w-10 text-right text-xs text-muted">{p.progress}%</span></div>
-                        <StatusChip status={p.status} />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-            <Card delay={0.15}>
-              <CardTitle><span className="flex items-center gap-2"><Clock size={15} /> Retainers</span></CardTitle>
-              {s.retainers.length === 0 ? <Empty title="No retainers yet" /> : s.retainers.map((r) => (
-                <div key={r.id} className="mb-4 last:mb-0">
-                  <div className="mb-1.5 flex items-center justify-between text-sm"><span className="truncate">{r.name}</span><StatusChip status={r.usage_state} label={`${r.used_pct}%`} /></div>
-                  <Progress value={r.used_pct} label={`${r.name} usage`} />
-                  <div className="mt-1 text-xs text-muted">{formatMinutes(r.used_minutes)} of {r.hours_per_month} h · {r.client_name}</div>
-                </div>
-              ))}
-            </Card>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Card delay={0.1}>
-              <CardTitle action={<Link href="/agents" className="text-xs text-muted hover:text-ink">Roster</Link>}><span className="flex items-center gap-2"><Bot size={15} /> Agent workforce</span></CardTitle>
-              <ul className="space-y-2.5">
-                {s.agents.items.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-2 text-sm">
-                    <div className="min-w-0"><div className="font-medium">{a.display_name}</div><div className="truncate text-xs text-muted">{a.role}</div></div>
-                    <StatusChip status={a.status === "connected" ? "connected" : "pending"} label={a.status === "connected" ? "connected" : "placeholder"} />
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-3 text-xs text-muted">{s.agents.runs_blocked} dispatches blocked by the safety guard.</div>
-            </Card>
-            <Card delay={0.15}>
-              <CardTitle><span className="flex items-center gap-2"><ShieldCheck size={15} /> Billing hand-offs to OMH</span></CardTitle>
-              {Object.keys(s.billing.by_status).length === 0 ? <Empty title="Nothing prepared yet" /> : (
-                <div className="flex flex-wrap gap-2">{Object.entries(s.billing.by_status).map(([k, v]) => <StatusChip key={k} status={k} label={`${v} ${k.replace(/_/g, " ")}`} />)}</div>
-              )}
-              <div className="mt-4 text-xs text-muted">RAGI prepares quote and invoice requests; Our Money Hub issues them and stays the book of record.</div>
-              <div className="mt-4 border-t border-line pt-3">
-                <div className="eyebrow mb-1">Our Money Hub</div>
-                {s.omh?.connected ? (
-                  <div className="space-y-2">
-                    <div className="text-sm text-positive">Connected</div>
-                    {s.omh.has_data && s.omh.by_currency && Object.keys(s.omh.by_currency).length > 0 ? (
-                      <ul className="space-y-1">
-                        {Object.entries(s.omh.by_currency).map(([cur, row]) => (
-                          <li key={cur} className="flex items-baseline justify-between gap-3 text-sm">
-                            <span className="text-muted">{cur}</span>
-                            <span className="num">{formatMoney(row.balance?.amount ?? null, row.balance?.currency ?? cur)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : <div className="text-sm text-muted">Connected — no balances in this period.</div>}
-                    {s.omh.note && <div className="text-xs text-muted">{s.omh.note}</div>}
+              {!projects ? <Skeleton className="h-36" /> : inMotion.length === 0 ? (
+                <Empty title="No projects in motion">Active, paused or failed work will show a progress bar here.</Empty>
+              ) : inMotion.map((p) => (
+                <Link key={p.id} href={`/projects/${p.id}`} className="grid gap-1 border-b py-2 no-underline" style={{ borderColor: "var(--border)", color: "inherit" }}>
+                  <div className="flex items-center gap-2 text-sm">
+                    <b className="font-semibold">{p.name}</b>
+                    {p.is_demo && <DemoBadge />}
+                    <StatusChip status={p.status} />
+                    <span className="flex-1" />
+                    <span className="faint num text-[11.5px]">{p.task_done} / {p.task_total} tasks · {p.progress}%</span>
                   </div>
-                ) : (
-                  <div className="text-sm text-muted">{s.omh?.message ?? "OMH is not connected."}</div>
-                )}
+                  <Progress value={p.progress} label={`${p.name} progress`} />
+                </Link>
+              ))}
+            </div>
+            <div className="card flex-1 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className="m-0 text-sm font-bold">Projects by status</h3>
+                <span className="faint text-xs">{projectTotal} total</span>
+                <span className="flex-1" />
               </div>
-              <div className="mt-4 border-t border-line pt-3">
-                <div className="eyebrow mb-1">Websites</div>
-                <div className="text-sm">{s.websites.checked ? `${s.websites.up}/${s.websites.checked} up` : <span className="text-muted">{s.websites.total} tracked · not checked yet</span>}</div>
-              </div>
-            </Card>
-            <Card delay={0.2}>
-              <CardTitle>Live activity</CardTitle>
-              <LiveActivity initial={s.activity} />
-            </Card>
+              {projectTotal === 0 ? <Empty title="No projects yet">Counts by status appear once a project exists.</Empty> : (
+                <ProjectsByStatus byStatus={byStatus} total={projectTotal} />
+              )}
+            </div>
           </div>
-          {s.tasks.overdue > 0 && (
-            <div className="flex items-center gap-2 text-xs text-muted"><AlertTriangle size={13} className="text-warning" /> Overdue counts use each task&apos;s due date in UTC.</div>
-          )}
-        </div>
+
+          <div className="flex flex-col gap-4 lg:flex-row">
+            <div className="card flex-1 p-4" style={{ flex: 1.15 }}>
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className="m-0 text-sm font-bold">Agent work</h3>
+                <span className="faint text-xs">{s.agents.enabled} enabled of {s.agents.total}</span>
+                <span className="flex-1" />
+                <Link href="/agents" className="linkish">Workforce</Link>
+              </div>
+              {!agents ? <Skeleton className="h-36" /> : agents.length === 0 ? (
+                <Empty title="No agents yet">Governed agents and their runs will be listed here.</Empty>
+              ) : (
+                <div className="grid gap-2">
+                  {agents.map((a) => {
+                    const mine = (runs ?? []).filter((r) => r.agent_id === a.id || r.agent_id === a.slug || r.agent_slug === a.slug);
+                    const current = mine.find((r) => ["running", "queued", "pending_approval"].includes(r.status));
+                    const done = mine.filter((r) => r.status === "verified").length;
+                    const failures = mine.filter((r) => r.status === "failed" || r.status === "blocked").length;
+                    return (
+                      <div key={a.id} className="flex flex-wrap items-center gap-2 border-b py-2 text-sm" style={{ borderColor: "var(--border)" }}>
+                        <div className="grid h-8 w-8 place-items-center rounded-lg" style={{ background: "var(--s3)" }}><Bot size={14} /></div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <b className="font-semibold">{a.display_name}</b>
+                            <StatusChip status={a.enabled ? a.connection : "not_connected"} />
+                          </div>
+                          <div className="text-xs" style={{ color: "var(--text2)" }}>
+                            {current
+                              ? <>Current: {current.task_title ?? "ad-hoc run"} · {humanize(current.status)}</>
+                              : a.open_tasks > 0
+                                ? `${a.open_tasks} open task${a.open_tasks === 1 ? "" : "s"}`
+                                : "Idle — no current task"}
+                          </div>
+                        </div>
+                        <div className="flex gap-3 text-xs tabular-nums" style={{ color: "var(--text2)" }}>
+                          <span><b className="text-[var(--text)]">{done}</b> done</span>
+                          <span><b className="text-[var(--text)]">{failures}</b> failed</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="card flex-1 p-4">
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="m-0 text-sm font-bold">Activity</h3>
+                <span className="flex-1" />
+                <Link href="/audit-logs" className="linkish">Audit log</Link>
+              </div>
+              {s.activity.length === 0 ? (
+                <Empty title="No activity yet">Recorded project, task and agent events will appear in this feed.</Empty>
+              ) : <LiveActivity initial={s.activity} />}
+            </div>
+          </div>
+
+          <div className="card p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <h3 className="m-0 text-sm font-bold">Task throughput</h3>
+              <span className="faint text-xs">Last 14 days</span>
+              <span className="flex-1" />
+              {s.approvals.pending > 0 && (
+                <Link href="/approvals" className="inline-flex items-center gap-1 text-xs" style={{ color: "var(--text2)" }}>
+                  <Shield size={12} /> {s.approvals.pending} awaiting approval
+                </Link>
+              )}
+            </div>
+            {s.tasks.throughput_14d.every((d) => d.completed === 0 && d.created === 0) ? (
+              <Empty title="No task movement yet">Completed and opened tasks will appear here.</Empty>
+            ) : <ThroughputChart data={s.tasks.throughput_14d} />}
+            <div className="legend mt-2">
+              <span><i style={{ background: "var(--c1)" }} />Completed</span>
+              <span><i style={{ background: "var(--danger)" }} />Opened (above completed)</span>
+              <span className="flex-1" />
+              <Link href="/tasks" className="text-xs" style={{ color: "var(--text2)" }}>View as table</Link>
+            </div>
+          </div>
+
+          <p className="text-xs" style={{ color: "var(--faint)" }}>
+            Money, invoices, budgets and FX live in Our Money Hub. <OpenInMoneyHub />
+          </p>
+        </>
       )}
     </>
   );

@@ -18,6 +18,6 @@ setup("sign in with password + TOTP", async ({ page }) => {
   await page.getByLabel("Verification code").fill(totp(secret!));
   await page.getByRole("button", { name: /verify/i }).click();
   await page.waitForURL(/\/dashboard/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Arnold");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(/operations overview/i);
   await page.context().storageState({ path: "e2e/.auth/owner.json" });
 });

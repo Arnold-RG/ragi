@@ -1,33 +1,36 @@
 "use client";
 import clsx from "clsx";
 import { ArrowRight, Plus } from "lucide-react";
-import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
+import { KanbanBoard, type KanbanColumn } from "@/components/kanban/KanbanBoard";
 import { Sheet } from "@/components/ui/Sheet";
 import { DemoBadge, PageHeader, Skeleton } from "@/components/ui/primitives";
 import { api, ApiError, fetcher } from "@/lib/api";
-import { formatMoney, relativeTime } from "@/lib/format";
+import { relativeTime } from "@/lib/format";
+import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import type { Lead } from "@/lib/types";
 
 const STAGES = [
-  { id: "new", label: "New", tone: "var(--arn-faint)" },
-  { id: "contacted", label: "Contacted", tone: "var(--arn-muted)" },
-  { id: "qualified", label: "Qualified", tone: "var(--arn-info)" },
-  { id: "proposal", label: "Proposal", tone: "var(--arn-accent)" },
-  { id: "won", label: "Won", tone: "var(--arn-positive)" },
-  { id: "lost", label: "Lost", tone: "var(--arn-danger)" },
+  { id: "new", label: "New" },
+  { id: "contacted", label: "Contacted" },
+  { id: "qualified", label: "Qualified" },
+  { id: "proposal", label: "Proposal", warning: true },
+  { id: "won", label: "Won" },
+  { id: "lost", label: "Lost", error: true },
 ];
 
-function totals(leads: Lead[]) {
-  // per currency, exact decimal strings → integer minor units (BigInt), never floats
-  const by: Record<string, bigint> = {};
-  for (const l of leads) {
-    if (!l.estimated_amount) continue;
-    const [i, f = ""] = l.estimated_amount.split(".");
-    by[l.currency] = (by[l.currency] ?? BigInt(0)) + BigInt(i) * BigInt(100) + BigInt((f + "00").slice(0, 2));
-  }
-  return Object.entries(by).map(([c, v]) => formatMoney(`${v / BigInt(100)}.${String(v % BigInt(100)).padStart(2, "0")}`, c));
+
+function usePhone() {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => setPhone(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return phone;
 }
 
 export default function PipelinePage() {
@@ -35,46 +38,50 @@ export default function PipelinePage() {
   const [open, setOpen] = useState<Lead | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<string[]>(["new", "lost"]);
+  const phone = usePhone();
   const move = async (l: Lead, stage: string) => {
     setError(null);
     try { await api(`/leads/${l.id}`, { method: "PATCH", json: { stage } }); mutate(); }
     catch (e) { setError(e instanceof ApiError ? e.message : "Could not move the lead"); }
   };
+  const columns: KanbanColumn<Lead>[] = STAGES.map((s) => {
+    const leads = (data ?? []).filter((l) => l.stage === s.id);
+    return {
+      id: s.id, label: s.label, items: leads,
+      warning: "warning" in s && s.warning, error: "error" in s && s.error,
+      emptyNote: s.id === "won" ? "Nothing won yet" : s.id === "lost" ? "No lost leads" : "No leads in this stage",
+    };
+  });
   return (
     <>
-      <PageHeader eyebrow="Studio" title="Client pipeline" subtitle="From first enquiry to signed work. A won lead becomes a client and an upcoming project in one step."
-        actions={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus size={15} /> New lead</button>} />
-      {error && <p role="alert" className="mb-3 text-sm text-danger">{error}</p>}
+      <PageHeader title="Pipeline" subtitle="From first enquiry to signed work. A won lead becomes a client and an upcoming project in one step."
+        actions={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus size={15} /> New card</button>} />
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       {!data ? <Skeleton className="h-96" /> : (
-        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 md:mx-0 md:px-0">
-          {STAGES.map((s) => {
-            const leads = data.filter((l) => l.stage === s.id);
-            return (
-              <div key={s.id} className="flex w-72 shrink-0 snap-start flex-col rounded-2xl border border-line bg-surface-2/40 p-2"
-                onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const l = data.find((x) => x.id === e.dataTransfer.getData("text/lead")); if (l && l.stage !== s.id && l.stage !== "won") move(l, s.id); }}>
-                <div className="px-2 py-1.5">
-                  <div className="flex items-center gap-2 text-xs font-semibold"><span className="h-2 w-2 rounded-full" style={{ background: s.tone }} />{s.label}<span className="num text-faint">{leads.length}</span></div>
-                  <div className="num mt-0.5 min-h-4 text-xs text-faint">{totals(leads).join(" · ")}</div>
+        <KanbanBoard
+          columns={columns}
+          phone={phone}
+          collapsedIds={phone ? [] : collapsed}
+          onToggleCollapse={(id) => setCollapsed((c) => c.includes(id) ? c.filter((x) => x !== id) : [...c, id])}
+          activeId={open?.id}
+          onMove={(l, stage) => { if (l.stage !== stage && l.stage !== "won") move(l, stage); }}
+          renderCard={(l, selected) => (
+            <button type="button" onClick={() => setOpen(l)} className={clsx("kc w-full text-left", selected && "sel")}>
+              <div className="body">
+                <div className="flex flex-wrap gap-1">
+                  {l.service && <span className="lbl"><i style={{ background: "var(--c1)" }} />{l.service}</span>}
+                  <DemoBadge show={l.is_demo} />
                 </div>
-                <div className="flex min-h-20 flex-col gap-2">
-                  {leads.map((l, i) => (
-                    <motion.div key={l.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-                      <div draggable={l.stage !== "won"} onDragStart={(e) => e.dataTransfer.setData("text/lead", l.id)} onClick={() => setOpen(l)} className="card cursor-pointer p-3 text-sm">
-                        <div className="font-medium">{l.company ?? l.name}</div>
-                        <div className="text-xs text-muted">{l.service ?? "—"}{l.source ? ` · via ${l.source}` : ""}</div>
-                        <div className="mt-2 flex items-center gap-2 text-xs">
-                          <span className="num">{formatMoney(l.estimated_amount, l.currency)}</span>
-                          <DemoBadge show={l.is_demo} />
-                          <span className="ml-auto text-faint">{relativeTime(l.updated_at)}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                <div className="title">{l.company ?? l.name}</div>
+                <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text2)" }}>
+                  <span>{l.name}</span>
+                  <span className="ml-auto">{relativeTime(l.updated_at)}</span>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </button>
+          )}
+        />
       )}
       <LeadSheet lead={open} onClose={() => setOpen(null)} onChanged={() => { mutate(); setOpen(null); }} move={move} />
       <NewLead open={creating} onClose={() => setCreating(false)} onCreated={() => mutate()} />
@@ -97,7 +104,7 @@ function LeadSheet({ lead, onClose, onChanged, move }: { lead: Lead | null; onCl
         <div className="flex flex-wrap gap-2"><DemoBadge show={lead.is_demo} /><span className="chip">{lead.stage}</span>{lead.service && <span className="chip">{lead.service}</span>}</div>
         <div className="grid grid-cols-2 gap-3">
           <div><div className="eyebrow">Contact</div><div>{lead.name}</div><div className="text-xs text-muted">{lead.email ?? "no email"}</div></div>
-          <div><div className="eyebrow">Estimate</div><div className="num">{formatMoney(lead.estimated_amount, lead.currency)}</div></div>
+          <div><div className="eyebrow">Estimate</div><div className="text-xs text-muted">Amounts live in Our Money Hub.<br /><OpenInMoneyHub /></div></div>
         </div>
         {lead.notes && <p className="text-muted">{lead.notes}</p>}
         {lead.stage !== "won" && (
@@ -122,13 +129,13 @@ function LeadSheet({ lead, onClose, onChanged, move }: { lead: Lead | null; onCl
 }
 
 function NewLead({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
-  const [f, setF] = useState({ name: "", company: "", email: "", service: "", source: "", estimated_amount: "", currency: "RWF" });
+  const [f, setF] = useState({ name: "", company: "", email: "", service: "", source: "" });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(null);
     const body = Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v === "" ? null : v]));
-    try { await api("/leads", { json: { ...body, currency: f.currency } }); onCreated(); onClose(); }
+    try { await api("/leads", { json: { ...body, estimated_amount: null } }); onCreated(); onClose(); }
     catch (err) { setError(err instanceof ApiError ? err.message : "Could not save the lead"); }
   };
   return (
@@ -139,8 +146,7 @@ function NewLead({ open, onClose, onCreated }: { open: boolean; onClose: () => v
         <input className="input" placeholder="Email" type="email" value={f.email} onChange={set("email")} aria-label="Email" />
         <input className="input" placeholder="Service (website, app…)" value={f.service} onChange={set("service")} aria-label="Service" />
         <input className="input" placeholder="Source (referral, Instagram…)" value={f.source} onChange={set("source")} aria-label="Source" />
-        <input className="input" placeholder="Estimated amount" inputMode="decimal" value={f.estimated_amount} onChange={set("estimated_amount")} aria-label="Estimated amount" />
-        <select className="input" value={f.currency} onChange={set("currency")} aria-label="Currency">{["RWF", "PLN", "EUR", "USD"].map((c) => <option key={c}>{c}</option>)}</select>
+        <p className="col-span-2 text-xs text-muted">Estimates and fees are set in Our Money Hub. <OpenInMoneyHub /></p>
         {error && <p role="alert" className="col-span-2 text-sm text-danger">{error}</p>}
         <div className="col-span-2 flex justify-end gap-2"><button type="button" className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary">Save lead</button></div>
       </form>

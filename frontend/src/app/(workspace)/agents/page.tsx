@@ -33,7 +33,7 @@ export default function AgentsPage() {
             <Card key={a.id} delay={i * 0.04}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3">
-                  <div className="relative grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-caramel/30 to-forest/40"><Bot size={20} /><span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-faint" /></div>
+                  <div className="relative grid h-12 w-12 place-items-center rounded-xl" style={{ background: "var(--s3)", color: "var(--text)" }}><Bot size={20} /></div>
                   <div><div className="font-display text-xl">{a.display_name}</div><div className="text-xs text-muted">{a.role}</div></div>
                 </div>
                 <StatusChip status="pending" label={a.placeholder ? "placeholder" : a.connection} />

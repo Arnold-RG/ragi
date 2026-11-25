@@ -2,17 +2,22 @@
 import clsx from "clsx";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
+import { ChromePortal } from "@/components/layout/PageChrome";
 
 export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: string; title: string; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        {eyebrow && <div className="eyebrow mb-2">{eyebrow}</div>}
-        <h1 className="font-display text-3xl font-medium tracking-tight md:text-[2.5rem] md:leading-[1.1]">{title}</h1>
-        {subtitle && <p className="mt-2 max-w-2xl text-sm text-muted">{subtitle}</p>}
+    <ChromePortal>
+      <div className="min-w-0">
+        <h1 className="m-0 text-[22px] font-bold tracking-tight">{title}</h1>
+        {(eyebrow || subtitle) && (
+          <div className="mt-0.5 truncate text-[12.5px]" style={{ color: "var(--text2)" }}>
+            {eyebrow}{eyebrow && subtitle ? " · " : ""}{subtitle}
+          </div>
+        )}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-    </div>
+      <div className="hidden flex-1 lg:block" />
+      {actions && <div className="ml-auto hidden flex-wrap items-center gap-2 sm:flex">{actions}</div>}
+    </ChromePortal>
   );
 }
 
@@ -83,7 +88,7 @@ export function Progress({ value, label = "Progress" }: { value: number; label?:
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-label={label} aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
       <motion.div
         className="h-full rounded-full"
-        style={{ background: "linear-gradient(90deg, var(--arn-caramel), color-mix(in oklab, var(--arn-caramel) 60%, var(--arn-sage)))" }}
+        style={{ background: "var(--primary)" }}
         initial={{ width: 0 }}
         animate={{ width: `${Math.max(0, Math.min(100, value))}%` }}
         transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}

@@ -3,10 +3,15 @@ import { Check, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
 import { useMe } from "@/components/layout/AuthProvider";
+import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import { Card, DemoBadge, Empty, PageHeader, Skeleton, StatusChip, TbdNote } from "@/components/ui/primitives";
 import { api, ApiError, fetcher } from "@/lib/api";
 import { humanize, relativeTime } from "@/lib/format";
 import type { Approval } from "@/lib/types";
+
+function looksLikeMoney(text: string) {
+  return /\b(PLN|RWF|EUR|USD|GBP|zł|draft total)\b/i.test(text) || /\d+[\s.,]\d*\s*(PLN|RWF|EUR|USD|GBP|zł)/i.test(text);
+}
 
 export default function ApprovalsPage() {
   const me = useMe();
@@ -21,7 +26,7 @@ export default function ApprovalsPage() {
   const decided = (data ?? []).filter((a) => a.status !== "pending");
   return (
     <>
-      <PageHeader eyebrow="Control" title="Approvals" subtitle="Nothing financial or risky leaves RAGI without your decision. Only the owner can approve." />
+      <PageHeader eyebrow="Control" title="Approvals" subtitle="Nothing risky leaves RAGI without your decision. Amounts stay in Our Money Hub. Only the owner can approve." />
       <div className="mb-4"><TbdNote gap={18}>Which actions need approval beyond quotes, invoices, agent runs and publishing is your call.</TbdNote></div>
       {error && <p role="alert" className="mb-3 text-sm text-danger">{error}</p>}
       {!data ? <Skeleton className="h-40" /> : (
@@ -35,7 +40,11 @@ export default function ApprovalsPage() {
                     <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-warning/15 text-warning"><ShieldCheck size={18} /></div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 font-medium">{a.title} <span className="chip">{humanize(a.kind)}</span><DemoBadge show={a.is_demo} /></div>
-                      {a.detail && <div className="text-sm text-muted">{a.detail}</div>}
+                      {a.detail && (
+                      looksLikeMoney(a.detail)
+                        ? <div className="text-sm text-muted">Amounts live in Our Money Hub. <OpenInMoneyHub /></div>
+                        : <div className="text-sm text-muted">{a.detail}</div>
+                    )}
                       <div className="text-xs text-faint">Requested by {a.requested_by} · {relativeTime(a.created_at)}</div>
                     </div>
                     {me?.role === "owner" ? (

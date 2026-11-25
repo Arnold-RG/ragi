@@ -1,30 +1,34 @@
 "use client";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+/** Stacked bars: completed (c1) and opened (created) as a second series. Word legend lives with the parent. */
 export function ThroughputChart({ data }: { data: { day: string; completed: number; created: number }[] }) {
-  const rows = data.map((d) => ({ ...d, label: new Date(d.day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }) }));
+  const rows = data.map((d) => ({
+    ...d,
+    label: new Date(d.day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+  }));
+  const max = Math.max(1, ...rows.map((r) => r.completed + Math.max(0, r.created - r.completed)));
+  const h = 156;
+  const w = Math.max(320, rows.length * 36);
+  const barW = 16;
+  const gap = (w - 24) / rows.length;
   return (
-    <div className="h-56 w-full">
-      <ResponsiveContainer>
-        <AreaChart data={rows} margin={{ left: -24, right: 8, top: 8, bottom: 0 }}>
-          <defs>
-            <linearGradient id="gDone" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="var(--arn-caramel)" stopOpacity={0.45} />
-              <stop offset="100%" stopColor="var(--arn-caramel)" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="gNew" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="var(--arn-sage)" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="var(--arn-sage)" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid stroke="var(--arn-border)" vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: "var(--arn-faint)", fontSize: 11 }} tickLine={false} axisLine={false} interval={2} />
-          <YAxis allowDecimals={false} tick={{ fill: "var(--arn-faint)", fontSize: 11 }} tickLine={false} axisLine={false} />
-          <Tooltip contentStyle={{ background: "var(--arn-surface-2)", border: "1px solid var(--arn-border-strong)", borderRadius: 12, color: "var(--arn-text)", fontSize: 12 }} />
-          <Area type="monotone" dataKey="created" name="Created" stroke="var(--arn-sage)" strokeWidth={2} fill="url(#gNew)" />
-          <Area type="monotone" dataKey="completed" name="Completed" stroke="var(--arn-caramel)" strokeWidth={2} fill="url(#gDone)" />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+    <svg viewBox={`0 0 ${w} ${h + 24}`} width="100%" height={h + 24} role="img" aria-label="Task throughput for the last 14 days">
+      {rows.map((r, i) => {
+        const x = 12 + i * gap + (gap - barW) / 2;
+        const opened = Math.max(0, r.created);
+        const doneH = (r.completed / max) * h;
+        const rest = Math.max(0, opened - r.completed);
+        const restH = (rest / max) * h;
+        return (
+          <g key={r.day}>
+            <rect x={x} y={h - doneH} width={barW} height={doneH} rx="3" fill="var(--c1)">
+              <title>{`${r.label}: ${r.completed} completed, ${r.created} opened`}</title>
+            </rect>
+            {restH > 0 && <rect x={x} y={h - doneH - restH} width={barW} height={restH} rx="3" fill="var(--danger)" />}
+            {i % 2 === 0 && <text x={x + barW / 2} y={h + 16} textAnchor="middle" fill="var(--text2)" fontSize="10.5">{r.label}</text>}
+          </g>
+        );
+      })}
+    </svg>
   );
 }

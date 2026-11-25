@@ -1,7 +1,7 @@
 // Formatting helpers. Money is handled as decimal STRINGS from the API and is
 // never converted to floating point or summed across currencies.
 
-const MINOR_UNITS: Record<string, number> = { PLN: 2, RWF: 0, EUR: 2, USD: 2 };
+const MINOR_UNITS: Record<string, number> = { PLN: 2, RWF: 0, EUR: 2, USD: 2, GBP: 2 };
 
 export function formatMoney(amount: string | null | undefined, currency: string): string {
   if (amount == null || amount === "") return "—";

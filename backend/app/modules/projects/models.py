@@ -20,7 +20,7 @@ class Project(IdMixin, TimestampMixin, Base):
     client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id", ondelete="SET NULL"), index=True)
     retainer_id: Mapped[str | None] = mapped_column(ForeignKey("retainers.id", ondelete="SET NULL"), index=True)
     hourly_rate: Mapped[object | None] = mapped_column(Numeric(18, 2))  # draft rate used for invoice requests
-    currency: Mapped[str] = mapped_column(String(3), default="RWF", nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="PLN", nullable=False)
     repo_provider: Mapped[str | None] = mapped_column(String(20))
     repo_owner: Mapped[str | None] = mapped_column(String(100))
     repo_name: Mapped[str | None] = mapped_column(String(100))

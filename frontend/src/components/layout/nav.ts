@@ -13,7 +13,6 @@ export const NAV: NavItem[] = [
   { href: "/pipeline", label: "Pipeline", icon: Handshake, group: "Studio" },
   { href: "/clients", label: "Clients", icon: Users, group: "Studio" },
   { href: "/retainers", label: "Retainers", icon: Repeat, group: "Studio" },
-  { href: "/billing", label: "Quotes & invoices", icon: Receipt, group: "Studio" },
   { href: "/agents", label: "Agents", icon: Bot, group: "Intelligence" },
   { href: "/reports", label: "Reports", icon: BarChart3, group: "Intelligence" },
   { href: "/approvals", label: "Approvals", icon: ShieldCheck, group: "Control" },

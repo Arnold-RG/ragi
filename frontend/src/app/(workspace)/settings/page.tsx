@@ -31,7 +31,7 @@ export default function SettingsPage() {
             <dt className="text-muted">Role</dt><dd className="capitalize">{me?.role}</dd>
             <dt className="text-muted">Two-step sign-in</dt><dd className="flex items-center gap-1.5">{me?.mfa_enabled ? <><ShieldCheck size={14} className="text-positive" /> On</> : "Off"}</dd>
           </dl>
-          <div className="mt-4"><TbdNote gap={2}>Shared sign-in across RAGI and Our Money Hub (OIDC provider) is your decision.</TbdNote></div>
+          <p className="mt-4 text-sm text-muted">RAGI and Our Money Hub keep separate accounts and sessions. There is no shared sign-in.</p>
         </Card>
         <Card delay={0.05}>
           <CardTitle>Appearance</CardTitle>
@@ -40,7 +40,7 @@ export default function SettingsPage() {
               <button key={t} type="button" role="radio" aria-checked={theme === t} onClick={() => setTheme(t)} className={`btn flex-1 capitalize ${theme === t ? "border-accent/60 bg-accent/15" : ""}`}>{t}</button>
             ))}
           </div>
-          <div className="mt-4"><TbdNote gap={25}>Brand palette awaits your choice: spec §12 colours, the live Arnova site colours, or the C2 logo family. Swapping is a one-file change.</TbdNote></div>
+          <p className="mt-4 text-sm text-muted">Appearance follows the Sky ops look you picked: navy with Pastel dawn sky, in dark and light.</p>
         </Card>
         <Card delay={0.1}>
           <CardTitle>Safety switches</CardTitle>

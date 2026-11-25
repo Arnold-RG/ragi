@@ -26,7 +26,7 @@ class RetainerIn(BaseModel):
     name: str = Field(min_length=2, max_length=200)
     hours_per_month: int = Field(gt=0, le=744)
     monthly_fee: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Literal["PLN", "RWF", "EUR", "USD"] = "RWF"
+    currency: Literal["PLN", "RWF", "EUR", "USD", "GBP"] = "PLN"
     starts_on: date
 
 

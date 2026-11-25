@@ -21,7 +21,7 @@ from app.modules.projects.models import Project
 
 router = APIRouter(prefix="/leads", tags=["pipeline"])
 Stage = Literal["new", "contacted", "qualified", "proposal", "won", "lost"]
-Currency = Literal["PLN", "RWF", "EUR", "USD"]
+Currency = Literal["PLN", "RWF", "EUR", "USD", "GBP"]
 
 
 class LeadIn(BaseModel):
@@ -32,7 +32,7 @@ class LeadIn(BaseModel):
     service: str | None = Field(default=None, max_length=80)
     stage: Stage = "new"
     estimated_amount: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Currency = "RWF"
+    currency: Currency = "PLN"
     notes: str | None = Field(default=None, max_length=4000)
 
 

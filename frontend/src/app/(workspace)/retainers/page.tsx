@@ -5,7 +5,8 @@ import useSWR from "swr";
 import { Sheet } from "@/components/ui/Sheet";
 import { Card, DemoBadge, Empty, PageHeader, Progress, Skeleton, StatusChip } from "@/components/ui/primitives";
 import { api, ApiError, fetcher } from "@/lib/api";
-import { formatDate, formatMinutes, formatMoney } from "@/lib/format";
+import { formatDate, formatMinutes } from "@/lib/format";
+import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import type { Client, Retainer } from "@/lib/types";
 
 export default function RetainersPage() {
@@ -25,7 +26,7 @@ export default function RetainersPage() {
               </div>
               <div className="mt-6 flex items-end justify-between">
                 <div><div className="num font-display text-4xl">{r.used_pct}%</div><div className="text-xs text-muted">{formatMinutes(r.used_minutes)} of {r.hours_per_month} h this month (from {formatDate(r.month_start)})</div></div>
-                <div className="text-right"><div className="eyebrow">Monthly fee</div><div className="num">{formatMoney(r.monthly_fee, r.currency)}</div></div>
+                <div className="text-right text-xs text-muted"><div className="eyebrow">Monthly fee</div><OpenInMoneyHub /></div>
               </div>
               <div className="mt-3"><Progress value={r.used_pct} label={`${r.name} usage`} /></div>
               <div className="mt-4 flex flex-wrap gap-1.5">{r.projects.map((p) => <span key={p.id} className="chip">{p.name}</span>)}{r.projects.length === 0 && <span className="text-xs text-muted">No projects linked yet — link one from the project settings.</span>}</div>
@@ -40,12 +41,12 @@ export default function RetainersPage() {
 
 function NewRetainer({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const { data: clients } = useSWR<Client[]>(open ? "/clients" : null, fetcher);
-  const [f, setF] = useState({ client_id: "", name: "", hours_per_month: "10", monthly_fee: "", currency: "RWF", starts_on: new Date().toISOString().slice(0, 10) });
+  const [f, setF] = useState({ client_id: "", name: "", hours_per_month: "10", starts_on: new Date().toISOString().slice(0, 10) });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(null);
-    try { await api("/retainers", { json: { ...f, hours_per_month: Number(f.hours_per_month), monthly_fee: f.monthly_fee || null } }); onCreated(); onClose(); }
+    try { await api("/retainers", { json: { ...f, hours_per_month: Number(f.hours_per_month), monthly_fee: null } }); onCreated(); onClose(); }
     catch (err) { setError(err instanceof ApiError ? err.message : "Could not save"); }
   };
   return (
@@ -55,8 +56,7 @@ function NewRetainer({ open, onClose, onCreated }: { open: boolean; onClose: () 
         <input className="input col-span-2" placeholder="Plan name" value={f.name} onChange={set("name")} required minLength={2} aria-label="Plan name" />
         <input className="input" type="number" min={1} max={744} value={f.hours_per_month} onChange={set("hours_per_month")} aria-label="Hours per month" />
         <input className="input" type="date" value={f.starts_on} onChange={set("starts_on")} aria-label="Starts on" />
-        <input className="input" placeholder="Monthly fee" inputMode="decimal" value={f.monthly_fee} onChange={set("monthly_fee")} aria-label="Monthly fee" />
-        <select className="input" value={f.currency} onChange={set("currency")} aria-label="Currency">{["RWF", "PLN", "EUR", "USD"].map((c) => <option key={c}>{c}</option>)}</select>
+        <p className="col-span-2 text-xs text-muted">The monthly fee is set in Our Money Hub. <OpenInMoneyHub /></p>
         {error && <p role="alert" className="col-span-2 text-sm text-danger">{error}</p>}
         <div className="col-span-2 flex justify-end gap-2"><button type="button" className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary">Save</button></div>
       </form>

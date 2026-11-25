@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer
 
-ProjectStatus = Literal["upcoming", "active", "paused", "completed", "unverified"]
+ProjectStatus = Literal["upcoming", "active", "paused", "completed", "unverified", "failed"]
 Priority = Literal["low", "medium", "high", "critical"]
 Category = Literal[
     "operations", "finance", "entertainment", "agency-website", "client-website",
@@ -28,7 +28,7 @@ class ProjectBase(BaseModel):
     due_date: date | None = None
     retainer_id: str | None = None
     hourly_rate: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Literal["PLN", "RWF", "EUR", "USD"] = "RWF"
+    currency: Literal["PLN", "RWF", "EUR", "USD", "GBP"] = "PLN"
 
 
 class ProjectCreate(ProjectBase):
@@ -49,7 +49,7 @@ class ProjectUpdate(BaseModel):
     due_date: date | None = None
     retainer_id: str | None = None
     hourly_rate: str | None = Field(default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$")
-    currency: Literal["PLN", "RWF", "EUR", "USD"] | None = None
+    currency: Literal["PLN", "RWF", "EUR", "USD", "GBP"] | None = None
 
 
 class MilestoneOut(BaseModel):
@@ -85,7 +85,7 @@ class ProjectOut(BaseModel):
     completed_at: datetime | None
     retainer_id: str | None = None
     hourly_rate: Decimal | None = None
-    currency: str = "RWF"
+    currency: str = "PLN"
     verified: bool
     is_demo: bool
     owner_approval_required: bool

@@ -27,7 +27,7 @@ export default function LoginPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <h2 className="font-display text-3xl font-medium tracking-tight">Sign in</h2>
-      <p className="mt-2 text-sm text-muted">Owner, team and client-portal access.</p>
+      <p className="mt-2 text-sm text-muted">This sign-in is only for RAGI. Our Money Hub has its own accounts and login.</p>
       <form onSubmit={submit} className="mt-8 space-y-4">
         <div>
           <label className="label" htmlFor="email">Email</label>

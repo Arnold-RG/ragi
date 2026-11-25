@@ -21,7 +21,7 @@ from app.modules.projects.models import Project
 from app.modules.time_tracking.models import TimeEntry
 
 router = APIRouter(prefix="/billing-handoffs", tags=["billing"])
-Currency = Literal["PLN", "RWF", "EUR", "USD"]
+Currency = Literal["PLN", "RWF", "EUR", "USD", "GBP"]
 
 
 class LineIn(BaseModel):
@@ -34,7 +34,7 @@ class QuoteIn(BaseModel):
     client_id: str
     project_id: str | None = None
     title: str = Field(min_length=2, max_length=300)
-    currency: Currency = "RWF"
+    currency: Currency = "PLN"
     lines: list[LineIn] = Field(min_length=1, max_length=50)
     notes: str | None = Field(default=None, max_length=4000)
 
@@ -117,7 +117,7 @@ def submit(handoff_id: str, request: Request, db: Session = Depends(get_db), use
         raise HTTPException(409, f"Request is {h.status}")
     a = Approval(organization_id=user.organization_id, kind="billing_handoff",
                  title=f"Send {h.kind} request “{h.title}” to Our Money Hub",
-                 detail=f"Draft total {quantize(Decimal(h.draft_total), h.currency)} {h.currency}. OMH issues the official document.",
+                 detail="Amounts and the official document live in Our Money Hub. Approve here to hand the request over.",
                  subject_type="billing_handoff", subject_id=h.id, requested_by=user.full_name, is_demo=h.is_demo)
     db.add(a)
     db.flush()

@@ -1,26 +1,71 @@
 "use client";
 import { ExternalLink, GitBranch, Plus } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
+import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { Sheet } from "@/components/ui/Sheet";
 import { Card, DemoBadge, Empty, PageHeader, Progress, Skeleton, StatusChip } from "@/components/ui/primitives";
 import { api, ApiError, fetcher } from "@/lib/api";
+import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import { formatDate, humanize } from "@/lib/format";
 import type { Client, Project } from "@/lib/types";
 
-const FILTERS = ["all", "active", "upcoming", "paused", "completed", "unverified"] as const;
+const FILTERS = ["all", "active", "upcoming", "paused", "completed", "failed", "unverified"] as const;
 
 export default function ProjectsPage() {
   const { data, mutate } = useSWR<Project[]>("/projects", fetcher);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
   const [creating, setCreating] = useState(false);
+  const [view, setView] = useState<"board" | "list">("board");
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => setPhone(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const list = (data ?? []).filter((p) => filter === "all" || p.status === filter);
+  const boardCols = FILTERS.filter((f) => f !== "all").map((f) => ({
+    id: f, label: f[0].toUpperCase() + f.slice(1),
+    items: (data ?? []).filter((p) => p.status === f),
+    warning: f === "paused", error: f === "failed" || f === "unverified",
+    emptyNote: f === "completed" ? "Nothing completed yet" : f === "failed" ? "No failed projects" : "No projects in this stage",
+  }));
   return (
     <>
       <PageHeader eyebrow="Operate" title="Projects" subtitle="Ecosystem products and client work. Progress comes from recorded tasks, never typed in."
-        actions={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus size={15} /> New project</button>} />
-      <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
+        actions={
+          <>
+            <div className="seg" role="radiogroup" aria-label="View">
+              <button type="button" role="radio" aria-checked={view === "board"} className={view === "board" ? "on" : ""} onClick={() => setView("board")}>Board</button>
+              <button type="button" role="radio" aria-checked={view === "list"} className={view === "list" ? "on" : ""} onClick={() => setView("list")}>List</button>
+            </div>
+            <button className="btn btn-primary" onClick={() => setCreating(true)}><Plus size={15} /> New project</button>
+          </>
+        } />
+      {view === "board" && data && (
+        <KanbanBoard
+          columns={boardCols}
+          phone={phone}
+          renderCard={(p, selected) => (
+            <Link href={`/projects/${p.id}`} className={`kc block ${selected ? "sel" : ""}`}>
+              <div className="body">
+                <div className="flex flex-wrap gap-1">
+                  <span className="lbl"><i style={{ background: "var(--c1)" }} />{humanize(p.category)}</span>
+                  <DemoBadge show={p.is_demo} />
+                </div>
+                <div className="title">{p.name}</div>
+                <div className="text-xs" style={{ color: "var(--text2)" }}>{p.client_name ?? "Arnova Group"} · {p.task_done}/{p.task_total} tasks</div>
+                <Progress value={p.progress} label={`${p.name} progress`} />
+              </div>
+            </Link>
+          )}
+        />
+      )}
+      {view === "board" && !data && <Skeleton className="h-96" />}
+      {view === "list" && (<><div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
         {FILTERS.map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={`chip h-8 shrink-0 px-3 capitalize ${filter === f ? "border-accent/50 bg-accent/15 text-ink" : ""}`}>
             {f} {data && <span className="num text-faint">{f === "all" ? data.length : data.filter((p) => p.status === f).length}</span>}
@@ -55,6 +100,7 @@ export default function ProjectsPage() {
             ))}
           </div>
         )}
+      </>)}
       <NewProject open={creating} onClose={() => setCreating(false)} onCreated={() => mutate()} />
     </>
   );
@@ -62,13 +108,13 @@ export default function ProjectsPage() {
 
 function NewProject({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const { data: clients } = useSWR<Client[]>(open ? "/clients" : null, fetcher);
-  const [f, setF] = useState({ name: "", category: "client-website", client_id: "", due_date: "", hourly_rate: "", currency: "RWF", summary: "" });
+  const [f, setF] = useState({ name: "", category: "client-website", client_id: "", due_date: "", summary: "" });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(null);
     try {
-      await api("/projects", { json: { ...f, client_id: f.client_id || null, due_date: f.due_date || null, hourly_rate: f.hourly_rate || null, summary: f.summary || null } });
+      await api("/projects", { json: { ...f, client_id: f.client_id || null, due_date: f.due_date || null, hourly_rate: null, summary: f.summary || null } });
       onCreated(); onClose();
     } catch (err) { setError(err instanceof ApiError ? err.message : "Could not create the project"); }
   };
@@ -82,8 +128,7 @@ function NewProject({ open, onClose, onCreated }: { open: boolean; onClose: () =
           </select>
           <select className="input" value={f.client_id} onChange={set("client_id")} aria-label="Client"><option value="">Internal (Arnova Group)</option>{clients?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <input className="input" type="date" value={f.due_date} onChange={set("due_date")} aria-label="Due date" />
-          <div className="flex gap-2"><input className="input" placeholder="Hourly rate" inputMode="decimal" value={f.hourly_rate} onChange={set("hourly_rate")} aria-label="Hourly rate" />
-            <select className="input w-24" value={f.currency} onChange={set("currency")} aria-label="Currency">{["RWF", "PLN", "EUR", "USD"].map((c) => <option key={c}>{c}</option>)}</select></div>
+          <p className="col-span-2 text-xs text-muted">Budgets and rates are set in Our Money Hub. <OpenInMoneyHub /></p>
         </div>
         <textarea className="input min-h-20" placeholder="Summary" value={f.summary} onChange={set("summary")} aria-label="Summary" />
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}

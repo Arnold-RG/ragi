@@ -1,21 +1,20 @@
 "use client";
-import { LogOut, Search, Square } from "lucide-react";
+import { Bell, LogOut, Search } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import useSWR from "swr";
 import { api, fetcher } from "@/lib/api";
 import { formatMinutes } from "@/lib/format";
-import { useMe } from "./AuthProvider";
 import { CommandPalette } from "./CommandPalette";
 import { Logo } from "./Logo";
 import { MobileNavigation } from "./MobileNavigation";
+import { ChromeSlot } from "./PageChrome";
 import { Sidebar } from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface Running { id: string; project_name: string; task_title: string | null; started_at: string }
 
-/** Current time, refreshed on an interval (keeps render pure). */
 function useNow(ms: number) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), ms); return () => clearInterval(t); }, [ms]);
@@ -28,18 +27,18 @@ function TimerPill() {
   if (!data) return null;
   const mins = Math.floor((now - new Date(data.started_at).getTime()) / 60000);
   return (
-    <button onClick={async () => { await api(`/time-entries/${data.id}/stop`, { method: "POST" }); mutate(null); }} className="chip min-h-11 gap-2 px-3 text-xs" style={{ color: "var(--arn-accent)" }} title="Stop timer" aria-label="Stop the running timer">
-      <span className="h-2 w-2 rounded-full bg-accent" />
+    <button onClick={async () => { await api(`/time-entries/${data.id}/stop`, { method: "POST" }); mutate(null); }} className="chip min-h-10 gap-2 px-3 text-xs" style={{ color: "var(--primary-text)" }} title="Stop timer" aria-label="Stop the running timer">
+      <span className="h-2 w-2 rounded-full" style={{ background: "var(--primary)" }} />
       <span className="num">{formatMinutes(Math.max(mins, 0))}</span>
-      <span className="hidden max-w-40 truncate text-muted sm:inline">{data.task_title ?? data.project_name}</span>
-      <Square size={11} />
+      <span className="hidden max-w-40 truncate sm:inline" style={{ color: "var(--text2)" }}>{data.task_title ?? data.project_name}</span>
     </button>
   );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const me = useMe();
   const router = useRouter();
+  const path = usePathname();
+  const rail = path.startsWith("/pipeline") || path.startsWith("/projects") || path.startsWith("/tasks");
   const [palette, setPalette] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -50,28 +49,26 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
   const logout = async () => { await api("/auth/logout", { method: "POST" }).catch(() => {}); router.replace("/login"); };
   return (
-    <div className="flex min-h-dvh">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass sticky top-0 z-30 flex h-16 items-center gap-3 border-x-0 border-t-0 px-4 md:px-8">
+    <div className={`app-shell ${rail ? "rail" : ""}`}>
+      <Sidebar rail={rail} />
+      <div className="flex min-w-0 flex-1 flex-col" style={{ background: "var(--bg)" }}>
+        <header className="top flex flex-wrap items-center gap-3 px-4 pt-4 md:px-6 lg:px-[24px]">
           <Link href="/dashboard" className="lg:hidden"><Logo compact /></Link>
-          <button onClick={() => setPalette(true)} className="flex min-h-11 flex-1 items-center gap-2 rounded-xl border border-line bg-surface-2/70 px-3 text-sm text-faint md:max-w-md" aria-label="Open search">
-            <Search size={16} /> <span className="truncate">Search or jump to…</span>
-            <span className="ml-auto hidden gap-1 md:flex"><span className="kbd">⌘</span><span className="kbd">K</span></span>
+          <ChromeSlot className="flex min-w-0 flex-1 items-center gap-3" />
+          <button onClick={() => setPalette(true)} className="search-field hidden md:flex" aria-label="Open search">
+            <Search size={16} /> <span className="truncate">Search…</span>
+            <span className="kbd ml-auto">⌘K</span>
           </button>
-          <div className="ml-auto flex items-center gap-1.5">
-            <TimerPill />
-            <ThemeToggle />
-            <div className="hidden items-center gap-2 pl-2 md:flex">
-              <div className="grid h-8 w-8 place-items-center rounded-full bg-surface-3 text-xs font-semibold">{me?.full_name.split(" ").map((p) => p[0]).join("").slice(0, 2)}</div>
-              <div className="leading-tight"><div className="text-xs font-medium">{me?.full_name}</div><div className="text-xs capitalize text-faint">{me?.role}</div></div>
-            </div>
-            <button type="button" className="btn btn-ghost icon-btn p-0" onClick={logout} aria-label="Sign out"><LogOut size={16} /></button>
-          </div>
+          <TimerPill />
+          <ThemeToggle />
+          <button type="button" className="btn icon hidden sm:grid" aria-label="Notifications" disabled title="No notifications yet">
+            <Bell size={16} />
+          </button>
+          <button type="button" className="btn-ghost icon-btn p-0" onClick={logout} aria-label="Sign out"><LogOut size={16} /></button>
         </header>
-        <main id="main" className="dock-safe mx-auto w-full max-w-[1400px] flex-1 px-4 pt-6 md:px-8">{children}</main>
+        <main id="main" className="dock-safe flex min-h-0 flex-1 flex-col gap-4 px-4 pt-4 md:px-6 lg:px-[24px]">{children}</main>
       </div>
-      <MobileNavigation />
+      <MobileNavigation onSearch={() => setPalette(true)} />
       {palette && <CommandPalette onClose={() => setPalette(false)} />}
     </div>
   );

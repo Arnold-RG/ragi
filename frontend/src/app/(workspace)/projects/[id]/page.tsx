@@ -7,7 +7,8 @@ import useSWR from "swr";
 import { TaskWorkspace } from "@/components/tasks/TaskWorkspace";
 import { Card, CardTitle, DemoBadge, PageHeader, Progress, Skeleton, Stat, StatusChip } from "@/components/ui/primitives";
 import { api, fetcher } from "@/lib/api";
-import { formatDate, formatMinutes, formatMoney, humanize } from "@/lib/format";
+import { formatDate, formatMinutes, humanize } from "@/lib/format";
+import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import type { Project, TimeEntry } from "@/lib/types";
 
 export default function ProjectPage() {
@@ -27,7 +28,7 @@ export default function ProjectPage() {
         subtitle={<>{p.client_name ?? "Arnova Group"} {p.summary ? `· ${p.summary}` : ""} <DemoBadge show={p.is_demo} /></>}
         actions={<>
           <select className="input h-10 w-auto" value={p.status} onChange={(e) => setStatus(e.target.value)} aria-label="Project status">
-            {["upcoming", "active", "paused", "completed", "unverified"].map((s) => <option key={s}>{s}</option>)}
+            {["upcoming", "active", "paused", "completed", "failed", "unverified"].map((s) => <option key={s}>{s}</option>)}
           </select>
           {p.production_url && <a className="btn" href={p.production_url} target="_blank" rel="noreferrer noopener"><ExternalLink size={14} /> Live site</a>}
         </>} />
@@ -35,7 +36,7 @@ export default function ProjectPage() {
         <Card><Stat label="Progress" value={`${p.progress}%`} hint={`${p.task_done} of ${p.task_total} tasks done`} /><div className="mt-3"><Progress value={p.progress} label={`${p.name} progress`} /></div></Card>
         <Card delay={0.05}><Stat label="Due" value={<span className="text-2xl">{formatDate(p.due_date)}</span>} hint={<StatusChip status={p.status} />} /></Card>
         <Card delay={0.1}><Stat label="Billable time · 90 days" value={formatMinutes(billable)} hint={`${formatMinutes(unbilled)} not invoiced yet`} /></Card>
-        <Card delay={0.15}><Stat label="Rate" value={<span className="text-2xl">{p.hourly_rate ? formatMoney(p.hourly_rate, p.currency) : "—"}</span>} hint="per hour, used for invoice requests" /></Card>
+        <Card delay={0.15}><Stat label="Budgets & rates" value={<OpenInMoneyHub className="text-base font-semibold" />} hint="Project budgets and rates live in Our Money Hub." /></Card>
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2"><CardTitle>Tasks</CardTitle><TaskWorkspace projectId={p.id} compact /></div>
