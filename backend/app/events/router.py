@@ -48,6 +48,7 @@ def outbox(db: Session = Depends(get_db), _=Depends(require(Perm.EVENTS_READ))):
 
 @router.post("", status_code=202)
 async def receive(request: Request, db: Session = Depends(get_db)):
+    raise HTTPException(status.HTTP_404_NOT_FOUND, "This endpoint is not available")
     """Inbound events from OMH and other authenticated services.
 
     Service-to-service only: each service signs with its OWN rotating key

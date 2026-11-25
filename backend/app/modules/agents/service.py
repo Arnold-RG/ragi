@@ -45,10 +45,9 @@ def _project_slug(db: Session, task: Task | None) -> str | None:
 
 
 def _status_from(checks: list[dict]) -> tuple[str, str | None]:
-    failed = [c for c in checks if not c["passed"] and c["name"] != "budget_reserved"]
+    failed = [c for c in checks if not c["passed"]]
     if not failed:
-        budget = next(c for c in checks if c["name"] == "budget_reserved")
-        return ("queued", None) if budget["passed"] else ("blocked", budget["detail"])
+        return "queued", None
     if len(failed) == 1 and failed[0]["name"] == "owner_approval":
         return "pending_approval", failed[0]["detail"]
     return "blocked", "; ".join(c["detail"] for c in failed)

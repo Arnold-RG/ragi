@@ -96,6 +96,8 @@ def _set_new_password(db: Session, user: User, password: str, request: Request, 
     user.failed_logins = 0
     user.locked_until = None
     revoke_all_other(db, user.id, keep=None)
+    from app.modules.identity.trusted_devices import revoke_all_for_user
+    revoke_all_for_user(db, user.id)
     record(db, user, "auth.password.changed", "user", user.id, request=request,
            detail={"method": method, "breach_check": breach})
     db.commit()

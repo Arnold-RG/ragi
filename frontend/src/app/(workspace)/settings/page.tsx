@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { useMe } from "@/components/layout/AuthProvider";
 import { setTheme, useTheme } from "@/components/layout/ThemeToggle";
 import { ConnectionsPanel } from "@/components/settings/ConnectionsPanel";
+import { TrustedDevices } from "@/components/settings/TrustedDevices";
 import { Card, CardTitle, PageHeader, Skeleton, TbdNote } from "@/components/ui/primitives";
 import { fetcher } from "@/lib/api";
 import type { Summary } from "@/lib/types";
@@ -29,7 +30,6 @@ export default function SettingsPage() {
             <dt className="text-muted">Role</dt><dd className="capitalize">{me?.role}</dd>
             <dt className="text-muted">Two-step sign-in</dt><dd className="flex items-center gap-1.5">{me?.mfa_enabled ? <><ShieldCheck size={14} className="text-positive" /> On</> : "Off"}</dd>
           </dl>
-          <p className="mt-4 text-sm text-muted">RAGI and Our Money Hub keep separate accounts and sessions. There is no shared sign-in.</p>
         </Card>
         <Card delay={0.05}>
           <CardTitle>Appearance</CardTitle>
@@ -58,6 +58,11 @@ export default function SettingsPage() {
         <div className="lg:col-span-1">
           <ConnectionsPanel isOwner={me?.role === "owner"} />
         </div>
+        {me?.role === "owner" && (
+          <div className="lg:col-span-2">
+            <TrustedDevices />
+          </div>
+        )}
       </div>
       <p className="mt-8 text-center text-xs text-muted">RAGI v2 · Created by Arnold Rurangwa / Arnova Group</p>
     </>

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useSWR from "swr";
 import { useMe } from "./AuthProvider";
-import { EcosystemSwitcher } from "./EcosystemSwitcher";
 import { Logo } from "./Logo";
 import { NAV } from "./nav";
 import { fetcher } from "@/lib/api";
@@ -24,7 +23,6 @@ export function Sidebar({ rail = false }: { rail?: boolean }) {
   return (
     <aside className={clsx("side hidden lg:flex", rail && "shrink-0")} aria-label="Workspace">
       <div className="logo px-1 pb-4"><Logo /></div>
-      <div className="logo-type px-1 pb-3"><EcosystemSwitcher /></div>
       <nav className="flex-1 space-y-1 overflow-y-auto" aria-label="Main">
         {groups.map((g) => (
           <div key={g}>

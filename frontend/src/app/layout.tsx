@@ -14,11 +14,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#070C1A" },
     { media: "(prefers-color-scheme: light)", color: "#F3F6FC" },
   ],
-  viewportFit: "cover",
 };
 
 // Sets the theme before first paint so there is no flash.

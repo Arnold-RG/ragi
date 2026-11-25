@@ -8,7 +8,6 @@ import { Sheet } from "@/components/ui/Sheet";
 import { DemoBadge, PageHeader, Skeleton } from "@/components/ui/primitives";
 import { api, ApiError, fetcher } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
-import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import type { Lead } from "@/lib/types";
 
 const STAGES = [
@@ -104,7 +103,7 @@ function LeadSheet({ lead, onClose, onChanged, move }: { lead: Lead | null; onCl
         <div className="flex flex-wrap gap-2"><DemoBadge show={lead.is_demo} /><span className="chip">{lead.stage}</span>{lead.service && <span className="chip">{lead.service}</span>}</div>
         <div className="grid grid-cols-2 gap-3">
           <div><div className="eyebrow">Contact</div><div>{lead.name}</div><div className="text-xs text-muted">{lead.email ?? "no email"}</div></div>
-          <div><div className="eyebrow">Estimate</div><div className="text-xs text-muted">Estimates live in Our Money Hub. <OpenInMoneyHub /></div></div>
+          <div><div className="eyebrow">Estimate</div><div className="text-xs text-muted">—</div></div>
         </div>
         {lead.notes && <p className="text-muted">{lead.notes}</p>}
         {lead.stage !== "won" && (
@@ -146,7 +145,6 @@ function NewLead({ open, onClose, onCreated }: { open: boolean; onClose: () => v
         <input className="input" placeholder="Email" type="email" value={f.email} onChange={set("email")} aria-label="Email" />
         <input className="input" placeholder="Service (website, app…)" value={f.service} onChange={set("service")} aria-label="Service" />
         <input className="input" placeholder="Source (referral, Instagram…)" value={f.source} onChange={set("source")} aria-label="Source" />
-        <p className="col-span-2 text-xs text-muted">Estimates and fees are set in Our Money Hub. <OpenInMoneyHub /></p>
         {error && <p role="alert" className="col-span-2 text-sm text-danger">{error}</p>}
         <div className="col-span-2 flex justify-end gap-2"><button type="button" className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary">Save lead</button></div>
       </form>

@@ -8,7 +8,6 @@ import { TaskWorkspace } from "@/components/tasks/TaskWorkspace";
 import { Card, CardTitle, DemoBadge, PageHeader, Progress, Skeleton, Stat, StatusChip } from "@/components/ui/primitives";
 import { api, fetcher } from "@/lib/api";
 import { formatDate, formatMinutes, humanize } from "@/lib/format";
-import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import type { Project, TimeEntry } from "@/lib/types";
 
 export default function ProjectPage() {
@@ -32,11 +31,10 @@ export default function ProjectPage() {
           </select>
           {p.production_url && <a className="btn" href={p.production_url} target="_blank" rel="noreferrer noopener"><ExternalLink size={14} /> Live site</a>}
         </>} />
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card><Stat label="Progress" value={`${p.progress}%`} hint={`${p.task_done} of ${p.task_total} tasks done`} /><div className="mt-3"><Progress value={p.progress} label={`${p.name} progress`} /></div></Card>
         <Card delay={0.05}><Stat label="Due" value={<span className="text-2xl">{formatDate(p.due_date)}</span>} hint={<StatusChip status={p.status} />} /></Card>
         <Card delay={0.1}><Stat label="Billable time · 90 days" value={formatMinutes(billable)} hint={`${formatMinutes(unbilled)} not invoiced yet`} /></Card>
-        <Card delay={0.15}><Stat label="Open in Money Hub" value={<OpenInMoneyHub className="text-base font-semibold" />} hint="Budgets and rates live only in Our Money Hub. RAGI does not show amounts or budget status." /></Card>
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2"><CardTitle>Tasks</CardTitle><TaskWorkspace projectId={p.id} compact /></div>

@@ -2,18 +2,16 @@
 import clsx from "clsx";
 import { Bot, FolderKanban, LayoutDashboard, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import useSWR from "swr";
 import { Sheet } from "@/components/ui/Sheet";
 import { fetcher } from "@/lib/api";
 import type { Summary } from "@/lib/types";
-import { EcosystemSwitcher } from "./EcosystemSwitcher";
 import { NAV } from "./nav";
 
 export function MobileNavigation({ onSearch }: { onSearch?: () => void }) {
   const path = usePathname();
-  const router = useRouter();
   const { data: s } = useSWR<Summary>("/dashboard/summary", fetcher, { refreshInterval: 60000 });
   const [more, setMore] = useState(false);
   const pending = s?.approvals.pending ?? 0;
@@ -43,11 +41,10 @@ export function MobileNavigation({ onSearch }: { onSearch?: () => void }) {
         </button>
       </nav>
       <Sheet id="more-sheet" open={more} onClose={() => setMore(false)} title="More">
-        <div className="mb-4"><EcosystemSwitcher /></div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="more-grid">
           {NAV.filter((n) => !["/dashboard", "/projects", "/agents"].includes(n.href)).map((n) => (
             <Link key={n.href} href={n.href} onClick={() => setMore(false)}
-              className={clsx("flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-2xl border p-3 text-center text-xs",
+              className={clsx("more-grid-item",
                 path === n.href || path.startsWith(n.href + "/") ? "border-accent/50 bg-accent/10" : "border-line bg-surface-2")}>
               <span className="relative">
                 <n.icon size={20} style={{ color: "var(--primary-text)" }} />

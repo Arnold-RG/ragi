@@ -7,7 +7,6 @@ import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { Sheet } from "@/components/ui/Sheet";
 import { Card, DemoBadge, Empty, PageHeader, Progress, Skeleton, StatusChip } from "@/components/ui/primitives";
 import { api, ApiError, fetcher } from "@/lib/api";
-import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import { formatDate, humanize } from "@/lib/format";
 import type { Client, Project } from "@/lib/types";
 
@@ -146,7 +145,6 @@ function NewProject({ open, onClose, onCreated }: { open: boolean; onClose: () =
           </select>
           <select className="input" value={f.client_id} onChange={set("client_id")} aria-label="Client"><option value="">Internal (Arnova Group)</option>{clients?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <input className="input" type="date" value={f.due_date} onChange={set("due_date")} aria-label="Due date" />
-          <p className="col-span-2 text-xs text-muted">Budgets and rates are set in Our Money Hub. <OpenInMoneyHub /></p>
         </div>
         <textarea className="input min-h-20" placeholder="Summary" value={f.summary} onChange={set("summary")} aria-label="Summary" />
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}

@@ -30,3 +30,5 @@
 
 html { color-scheme: dark; }
 html[data-theme="light"] { color-scheme: light; }
+
+html, body { max-width: 100%; overflow-x: hidden; }

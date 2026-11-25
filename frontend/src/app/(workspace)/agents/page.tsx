@@ -24,7 +24,7 @@ export default function AgentsPage() {
       <PageHeader eyebrow="Intelligence" title="Agent workforce" subtitle="Jarvis, Forge, Sentinel, Nova and Mentor as governed workers. Every dispatch passes the same fail-closed guard." />
       <div className="mb-4 flex items-start gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
         <ShieldAlert size={18} className="mt-0.5 shrink-0 text-warning" />
-        <div><span className="font-medium">Placeholders only.</span> <span className="text-muted">AGENTS_ENABLED=false, no AI provider chosen and OMH budget reservation not connected. Dispatching shows exactly which checks block a run.</span></div>
+        <div><span className="font-medium">Placeholders only.</span> <span className="text-muted">Agents stay off until you set AGENTS_ENABLED and connect an AI provider. Dispatching shows exactly which checks block a run.</span></div>
       </div>
       <div className="mb-4"><TbdNote gap={17}>Final roster, providers (OpenAI / xAI) and per-agent capabilities are your decision.</TbdNote></div>
       {!agents ? <Skeleton className="h-64" /> : (

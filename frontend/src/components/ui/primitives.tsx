@@ -16,7 +16,7 @@ export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: st
         )}
       </div>
       <div className="hidden flex-1 lg:block" />
-      {actions && <div className="ml-auto hidden flex-wrap items-center gap-2 sm:flex">{actions}</div>}
+      {actions && <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">{actions}</div>}
     </ChromePortal>
   );
 }
@@ -36,9 +36,9 @@ export function Card({ className, children, delay = 0 }: { className?: string; c
 
 export function CardTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-2">
-      <h2 className="text-sm font-semibold tracking-tight">{children}</h2>
-      {action}
+    <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+      <h2 className="min-w-0 text-sm font-semibold tracking-tight">{children}</h2>
+      {action ? <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">{action}</div> : null}
     </div>
   );
 }

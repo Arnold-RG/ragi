@@ -62,3 +62,18 @@ def set_oauth_cookie(response: Response, value: str, *, max_age: int = 600) -> N
 
 def clear_oauth_cookie(response: Response) -> None:
     response.delete_cookie(OAUTH_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+
+
+TRUSTED_COOKIE = "__Host-ragi_trusted"
+
+
+def read_trusted_token(request: Request) -> str | None:
+    return request.cookies.get(TRUSTED_COOKIE)
+
+
+def set_trusted_cookie(response: Response, token: str, *, max_age: int) -> None:
+    response.set_cookie(TRUSTED_COOKIE, token, max_age=max_age, **HOST_ATTRS)
+
+
+def clear_trusted_cookie(response: Response) -> None:
+    response.delete_cookie(TRUSTED_COOKIE, path="/", secure=True, httponly=True, samesite="lax")

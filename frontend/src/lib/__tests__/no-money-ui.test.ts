@@ -47,11 +47,10 @@ describe("operations home", () => {
       "Agent work",
       "LiveActivity",
       "ThroughputChart",
-      "FinanceFromOmh",
     ]) {
       expect(dash).toContain(s);
     }
-    expect(dash).not.toMatch(/formatMoney|Invoices outstanding|total_balance/);
+    expect(dash).not.toMatch(/formatMoney|Invoices outstanding|total_balance|FinanceFromOmh|OpenInMoneyHub|Our Money Hub/);
   });
 });
 

@@ -2,14 +2,13 @@
 import { FileText, Receipt } from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
-import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import { Card, DemoBadge, Empty, PageHeader, Skeleton, StatusChip } from "@/components/ui/primitives";
 import { api, ApiError, fetcher } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 import type { Handoff } from "@/lib/types";
 
 /**
- * Quotes and invoices are issued in Our Money Hub. RAGI only tracks approval status
+ * RAGI tracks approval status for quotes and invoices.
  * for requests already handed over — never amounts, rates or totals.
  */
 export default function BillingPage() {
@@ -25,12 +24,11 @@ export default function BillingPage() {
       <PageHeader
         eyebrow="Studio"
         title="Handoffs"
-        subtitle="Approval status only. Amounts, quotes and invoices live in Our Money Hub."
-        actions={<OpenInMoneyHub className="btn btn-primary" />}
+        subtitle="Approval status for quotes and invoices."
       />
       {error && <p role="alert" className="mb-3 text-sm text-danger">{error}</p>}
       {!data ? <Skeleton className="h-48" /> : data.length === 0 ? (
-        <Empty title="Nothing to hand over">Prepare quotes and invoices in Our Money Hub, then review approvals here.</Empty>
+        <Empty title="Nothing to review">Approvals for quotes and invoices will appear here.</Empty>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {data.map((h, i) => (
@@ -52,7 +50,6 @@ export default function BillingPage() {
               </ul>
               <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-xs text-muted">
                 <span className="flex items-center gap-2"><DemoBadge show={h.is_demo} />{relativeTime(h.created_at)}</span>
-                <OpenInMoneyHub />
               </div>
               {h.status === "draft" && <button className="btn btn-primary mt-3 w-full" onClick={() => submit(h)}>Send for owner approval</button>}
               {h.status === "pending_approval" && <a href="/approvals" className="btn mt-3 w-full">Waiting in approvals →</a>}

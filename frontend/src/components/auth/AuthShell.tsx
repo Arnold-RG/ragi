@@ -1,9 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 import { LayoutDashboard, ShieldCheck, Sparkles } from "lucide-react";
-import { ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { omhPublicUrl } from "@/lib/ecosystem-urls";
 
 const FEATURES = [
   { icon: LayoutDashboard, title: "Pipeline board with WIP limits and due dates" },
@@ -17,9 +15,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <section className="relative hidden flex-col border-r p-12 lg:flex" style={{ background: "var(--bg)", borderColor: "var(--border)" }}>
         <div className="flex items-center justify-between gap-4">
           <Logo />
-          <a href={omhPublicUrl()} className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "var(--text2)" }} title="Opens Our Money Hub. It uses a separate account and session.">
-            Open Money Hub <ArrowUpRight size={12} />
-          </a>
         </div>
         <div className="mt-16 max-w-md">
           <h1 className="font-display text-5xl font-medium leading-[1.05] tracking-tight">Your private operations desk.</h1>

@@ -15,7 +15,8 @@ def test_dispatch_blocked_by_emergency_stop_with_evidence(world):
     run = c.post("/api/v1/agents/forge/dispatch", json={"capability": "code_review"}).json()
     assert run["status"] == "blocked"
     checks = {ch["name"]: ch["passed"] for ch in run["checks"]}
-    assert checks["emergency_stop"] is False and checks["budget_reserved"] is False
+    assert checks["emergency_stop"] is False
+    assert "budget_reserved" not in checks
 
 
 def test_agent_runs_scoped_to_organization(world):
@@ -65,4 +66,4 @@ def test_capability_kept_after_approval(world, db, monkeypatch):
     runs = {r["id"]: r for r in owner.get("/api/v1/agent-runs").json()}
     after = runs[run["id"]]
     assert "capability" in {ch["name"] for ch in after["checks"]}
-    assert after["status"] == "blocked"  # OMH not connected → budget unavailable, fails closed
+    assert after["status"] == "queued"

@@ -51,7 +51,7 @@ export default function ReportsPage() {
           </div>
         )}
       </Card>
-      <div className="mt-4"><TbdNote gap={24}>Revenue, profit and cash-flow reports come from Our Money Hub once the finance overview is defined.</TbdNote></div>
+      <div className="mt-4"><TbdNote gap={24}>Revenue and cash-flow reports are not available in this workspace yet.</TbdNote></div>
     </>
   );
 }

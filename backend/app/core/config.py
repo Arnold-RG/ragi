@@ -32,9 +32,10 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     mail_from: str = ""
     mfa_pending_minutes: int = 10
-    idle_timeout_minutes_privileged: int = 30
-    idle_timeout_minutes: int = 120
-    session_ttl_hours: int = 12
+    trusted_device_days: int = 90
+    idle_timeout_minutes_privileged: int = 12 * 60
+    idle_timeout_minutes: int = 12 * 60
+    session_ttl_hours: int = 24 * 14
     cookie_secure: bool = True  # browsers accept Secure cookies on http://localhost
     # Fernet key for encrypting sensitive columns (MFA secrets). Required outside development.
     field_encryption_key: str | None = None

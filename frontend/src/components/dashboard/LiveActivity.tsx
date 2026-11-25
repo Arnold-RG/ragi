@@ -7,7 +7,8 @@ import type { Activity } from "@/lib/types";
 
 function wsUrl() {
   if (process.env.NEXT_PUBLIC_RAGI_WS_URL) return process.env.NEXT_PUBLIC_RAGI_WS_URL;
-  return `${location.protocol === "https:" ? "wss" : "ws"}://${location.hostname}:8410/ws/operations`;
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  return `${proto}://${location.host}/ws/operations`;
 }
 
 /**

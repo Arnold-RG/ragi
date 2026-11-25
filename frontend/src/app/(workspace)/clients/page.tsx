@@ -12,7 +12,7 @@ export default function ClientsPage() {
   const [creating, setCreating] = useState(false);
   return (
     <>
-      <PageHeader eyebrow="Studio" title="Clients" subtitle="Who the studio works for. Billing identity lives in Our Money Hub."
+      <PageHeader eyebrow="Studio" title="Clients" subtitle="Who the studio works for."
         actions={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus size={15} /> New client</button>} />
       {!data ? <Skeleton className="h-64" /> : data.length === 0 ? <Empty title="No clients yet" /> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -1,5 +1,5 @@
 "use client";
-import { CheckCircle2, CircleDashed, RefreshCw } from "lucide-react";
+import { CheckCircle2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
 import { Card, CardTitle, Skeleton, StatusChip } from "@/components/ui/primitives";
@@ -60,15 +60,17 @@ export function ConnectionsPanel({ isOwner }: { isOwner: boolean }) {
     <div className="grid gap-4">
       <Card delay={0.15}>
         <CardTitle>Connections</CardTitle>
-        {isLoading || !ints ? <Skeleton className="h-32" /> : (
+        {isLoading || !ints ? <Skeleton className="h-32" /> : ints.items.length === 0 ? (
+          <p className="text-sm text-muted">No extra services are connected. GitHub sync, when a token is set on the server, is managed below.</p>
+        ) : (
           <ul className="space-y-3 text-sm">
-            {ints.items.map((i) => (
+            {ints.items.filter((i) => i.connected).map((i) => (
               <li key={i.id} className="flex items-start gap-3">
-                {i.connected ? <CheckCircle2 size={16} className="mt-0.5 text-positive" /> : <CircleDashed size={16} className="mt-0.5 text-muted" />}
+                <CheckCircle2 size={16} className="mt-0.5 text-positive" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span>{i.name}</span>
-                    <StatusChip status={i.connected ? "connected" : "blocked"} label={i.connected ? "Connected" : "Off"} />
+                    <StatusChip status="connected" label="Connected" />
                   </div>
                   <div className="text-xs text-muted">{i.detail}</div>
                 </div>

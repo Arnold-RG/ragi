@@ -1,5 +1,5 @@
 "use client";
-import { Bell, LogOut, Search } from "lucide-react";
+import { LogOut, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -61,9 +61,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <TimerPill />
           <ThemeToggle />
-          <button type="button" className="btn icon hidden sm:grid" aria-label="Notifications" disabled title="No notifications yet">
-            <Bell size={16} />
-          </button>
           <button type="button" className="btn-ghost icon-btn p-0" onClick={logout} aria-label="Sign out"><LogOut size={16} /></button>
         </header>
         <main id="main" className="dock-safe flex min-h-0 flex-1 flex-col gap-4 px-4 pt-4 md:px-6 lg:px-[24px]">{children}</main>

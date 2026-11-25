@@ -5,8 +5,6 @@ import { useMemo } from "react";
 import useSWR from "swr";
 import { LiveActivity } from "@/components/dashboard/LiveActivity";
 import { ThroughputChart } from "@/components/dashboard/ThroughputChart";
-import { FinanceFromOmh } from "@/components/dashboard/FinanceFromOmh";
-import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import { AlarmBanner } from "@/components/ui/AlarmBanner";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { DemoBadge, Empty, PageHeader, Progress, Skeleton, StatusChip } from "@/components/ui/primitives";
@@ -75,7 +73,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Operations overview"
-        subtitle={<>{today} · Money and estimates live in <OpenInMoneyHub />{s?.demo_data ? " · " : ""}{s?.demo_data && <DemoBadge />}</>}
+        subtitle={<>{today}{s?.demo_data ? " · " : ""}{s?.demo_data && <DemoBadge />}</>}
         actions={
           <>
             <Link href="/approvals" className="btn">{s?.approvals.pending ? `${s.approvals.pending} to review` : "Approvals"}</Link>
@@ -229,7 +227,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <FinanceFromOmh />
 
         </>
       )}

@@ -3,10 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.permissions import Perm
-from app.core.service_auth import load_keyring
 from app.database.session import get_db
 from app.integrations.github import sync as github_sync
-from app.integrations.omh.client import fetch_summary
 from app.integrations.providers.base import provider_status
 from app.modules.identity.deps import require
 from app.modules.projects import registry
@@ -20,12 +18,9 @@ def _is_owner(user) -> bool:
 
 @router.get("/integrations")
 def integrations(_=Depends(require(Perm.READ))):
+    """Only services that are actually configured. Unset integrations stay off the Connections panel."""
     s = get_settings()
-    omh = bool(s.omh_api_url and load_keyring() and s.ecosystem_signing_key_id)
-    items = [
-        {"id": "omh", "name": "Our Money Hub", "kind": "ecosystem",
-         "connected": omh,
-         "detail": "Money lives in Our Money Hub. RAGI only hands work over." if omh else "OMH_API_URL or the ecosystem keyring is not set"},
+    candidates = [
         {"id": "openai", "name": "OpenAI", "kind": "ai-provider", "connected": provider_status("openai").configured,
          "detail": provider_status("openai").detail},
         {"id": "xai", "name": "Grok / xAI", "kind": "ai-provider", "connected": provider_status("xai").configured,
@@ -35,19 +30,11 @@ def integrations(_=Depends(require(Perm.READ))):
         {"id": "github-sync", "name": "GitHub project sync", "kind": "repositories",
          "connected": github_sync.token_configured(),
          "detail": "Read-only sync of Arnold-RG repositories" if github_sync.token_configured()
-         else "GITHUB_SYNC_TOKEN is not set — Sync from GitHub stays off"},
+         else "GITHUB_SYNC_TOKEN is not set"},
         {"id": "object-storage", "name": "S3-compatible storage", "kind": "files", "connected": bool(s.object_storage_endpoint),
          "detail": "Project artifacts" if s.object_storage_endpoint else "OBJECT_STORAGE_ENDPOINT not set"},
     ]
-    return {"items": items}
-
-
-@router.get("/integrations/omh/summary")
-def omh_summary(_=Depends(require(Perm.READ))):
-    """Live finance snapshot from OMH. Fail closed if OMH is asleep or not connected."""
-    result = fetch_summary()
-    return {"status": result.status, "detail": result.detail, "source": "omh",
-            "summary": result.payload}
+    return {"items": [i for i in candidates if i["connected"]]}
 
 
 @router.get("/integrations/github/sync")

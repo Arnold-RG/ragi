@@ -110,7 +110,7 @@ def toggle_agent(agent_id: str, body: AgentToggle, request: Request, db: Session
                  user=Depends(require(Perm.AGENTS_MANAGE))):
     a = _get_agent(db, user, agent_id)
     if body.enabled and not provider_status(a.provider).configured:
-        raise HTTPException(409, "Connect the provider and set an OMH budget before enabling this agent")
+        raise HTTPException(409, "Connect the provider before enabling this agent")
     a.enabled = body.enabled
     record(db, user, "agent.enabled" if body.enabled else "agent.disabled", "agent", a.id, request=request)
     if body.enabled:

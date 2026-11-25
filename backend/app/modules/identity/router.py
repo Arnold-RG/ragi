@@ -17,6 +17,7 @@ from app.database.session import get_db
 from app.modules.audit.service import record
 from app.modules.identity import invites, schemas
 from app.modules.identity.cookies import clear_invite_cookie, clear_session_cookie, read_invite_token, set_invite_cookie, set_session_cookie
+from app.modules.identity import trusted_devices as trusted
 from app.modules.identity.deps import _check_csrf, current_user, get_any_session, get_enrolment_session, require_recent_auth
 from app.modules.identity.service import (
     LoginError, MfaError, authenticate, check_mfa_code, revoke, revoke_all_other, rotate_session, start_session,
@@ -165,6 +166,7 @@ def verify(body: schemas.VerifyRequest, request: Request, response: Response,
     sess.enrolment_required = False
     user.last_login_at = datetime.now(UTC)
     token, fresh = rotate_session(db, sess, request)
+    trusted.issue_or_refresh(db, user, request, response)
     record(db, user, "auth.login", "user", user.id, request=request, detail={"mfa": True})
     db.commit()
     set_session_cookie(response, token, max_age=_cookie_age(fresh))
@@ -181,6 +183,7 @@ def verify_recovery(body: schemas.VerifyRequest, request: Request, response: Res
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "That backup code didn't match")
     user.last_login_at = datetime.now(UTC)
     token, fresh = rotate_session(db, sess, request)
+    trusted.issue_or_refresh(db, user, request, response)
     record(db, user, "auth.mfa.recovery_used", "user", user.id, request=request,
            detail={"remaining": remaining_count(db, user.id)})
     db.commit()
@@ -240,6 +243,7 @@ def mfa_enable(body: schemas.VerifyRequest, request: Request, response: Response
     sess.enrolment_required = False
     codes = issue_codes(db, user.id)
     token, fresh = rotate_session(db, sess, request)
+    trusted.issue_or_refresh(db, user, request, response)
     record(db, user, "auth.mfa.enabled", "user", user.id, request=request)
     db.commit()
     set_session_cookie(response, token, max_age=_cookie_age(fresh))
@@ -392,3 +396,48 @@ def create_invite(body: schemas.InviteCreateIn, request: Request, db: Session = 
     base = get_settings().public_base_url.rstrip("/")
     return {"email": str(body.email).lower(), "role": body.role, "expires_in_hours": 72,
             "invite_url": f"{base}/invite#{raw}", "token": raw}
+
+
+
+@router.get("/trusted-device")
+def trusted_device_hint(request: Request, db: Session = Depends(get_db)):
+    return trusted.hint(db, request)
+
+
+@router.post("/unlock", response_model=schemas.LoginResponse)
+def trusted_device_unlock(body: schemas.VerifyRequest, request: Request, response: Response,
+                          db: Session = Depends(get_db)):
+    _check_csrf(request)
+    try:
+        user = trusted.unlock(db, request, response, body.code)
+    except MfaError as exc:
+        db.commit()
+        headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
+        raise HTTPException(exc.status, str(exc), headers=headers) from exc
+    db.commit()
+    return schemas.LoginResponse(mfa_required=False, user=schemas.UserOut.from_user(user))
+
+
+@router.get("/trusted-devices")
+def list_trusted_devices(request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    if user.role != "owner":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the owner can manage trusted devices")
+    return {"items": trusted.list_devices(db, user, request)}
+
+
+@router.delete("/trusted-devices/{device_id}", status_code=204)
+def revoke_trusted_device(device_id: str, request: Request, response: Response,
+                          db: Session = Depends(get_db), user: User = Depends(current_user)):
+    if user.role != "owner":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the owner can manage trusted devices")
+    trusted.revoke_one(db, user, device_id, request, response)
+    db.commit()
+
+
+@router.delete("/trusted-devices", status_code=204)
+def revoke_all_trusted_devices(request: Request, response: Response,
+                               db: Session = Depends(get_db), user: User = Depends(current_user)):
+    if user.role != "owner":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the owner can manage trusted devices")
+    trusted.revoke_all(db, user, request, response)
+    db.commit()

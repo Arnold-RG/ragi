@@ -26,13 +26,10 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    """Start optional in-process loops (outbox delivery, GitHub sync). Off in tests."""
+    """Start optional in-process loops (GitHub sync). Off in tests."""
     tasks: list[asyncio.Task] = []
     if settings.app_env not in {"test"}:
-        from app.events.delivery import configured as delivery_configured, delivery_loop
         from app.integrations.github.loop import github_sync_loop
-        if delivery_configured() or settings.ecosystem_delivery_enabled:
-            tasks.append(asyncio.create_task(delivery_loop()))
         if settings.github_sync_interval_hours and settings.github_sync_interval_hours > 0:
             tasks.append(asyncio.create_task(github_sync_loop()))
     yield

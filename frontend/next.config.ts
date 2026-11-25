@@ -29,7 +29,10 @@ const nextConfig: NextConfig = {
     },
   },
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${API_ORIGIN}/api/:path*` }];
+    return [
+      { source: "/api/:path*", destination: `${API_ORIGIN}/api/:path*` },
+      { source: "/ws/:path*", destination: `${API_ORIGIN}/ws/:path*` },
+    ];
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
