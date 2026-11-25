@@ -12,6 +12,7 @@ function SetupForm() {
   useEffect(() => { if (secret) setToken(secret); }, [secret]);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);

@@ -47,7 +47,7 @@ export default function LoginPage() {
       <h1 className="font-display text-3xl font-medium tracking-tight">Sign in to RAGI</h1>
       <p className="mt-2 text-sm" style={{ color: "var(--text2)" }}>Welcome back. Use your email, username, or GitHub. This sign-in is only for RAGI.</p>
       <div className="mt-8">
-        <ProviderButtons enabled={cfg?.providers ?? { google: false, apple: false }} />
+        <ProviderButtons enabled={cfg?.providers ?? { github: false }} />
       </div>
       <Divider />
       <form onSubmit={submit} className="space-y-4">
