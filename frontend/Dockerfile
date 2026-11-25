@@ -18,4 +18,5 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 COPY --from=build /app ./
 USER node
 EXPOSE 3410
-CMD ["npx", "next", "start", "-p", "3410"]
+# Bind all interfaces and honor Render's PORT.
+CMD ["sh", "-c", "npx next start -H 0.0.0.0 -p ${PORT:-3410}"]
