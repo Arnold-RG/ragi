@@ -3,6 +3,7 @@
 Created by Arnold Rurangwa / Arnova Group.
 """
 import asyncio
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
@@ -22,7 +23,27 @@ from app.modules.identity.deps import load_session
 configure_logging()
 settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Start optional in-process loops (outbox delivery, GitHub sync). Off in tests."""
+    tasks: list[asyncio.Task] = []
+    if settings.app_env not in {"test"}:
+        from app.events.delivery import configured as delivery_configured, delivery_loop
+        from app.integrations.github.loop import github_sync_loop
+        if delivery_configured() or settings.ecosystem_delivery_enabled:
+            tasks.append(asyncio.create_task(delivery_loop()))
+        if settings.github_sync_interval_hours and settings.github_sync_interval_hours > 0:
+            tasks.append(asyncio.create_task(github_sync_loop()))
+    yield
+    for task in tasks:
+        task.cancel()
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="RAGI API",
     version="2.0.0-alpha.1",
     summary="Operations engine of the Arnova Group ecosystem — projects, tasks, clients, agents and approvals.",

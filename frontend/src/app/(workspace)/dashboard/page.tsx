@@ -5,12 +5,13 @@ import { useMemo } from "react";
 import useSWR from "swr";
 import { LiveActivity } from "@/components/dashboard/LiveActivity";
 import { ThroughputChart } from "@/components/dashboard/ThroughputChart";
+import { FinanceFromOmh } from "@/components/dashboard/FinanceFromOmh";
 import { OpenInMoneyHub } from "@/components/layout/OpenInMoneyHub";
 import { AlarmBanner } from "@/components/ui/AlarmBanner";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { DemoBadge, Empty, PageHeader, Progress, Skeleton, StatusChip } from "@/components/ui/primitives";
 import { fetcher } from "@/lib/api";
-import { humanize, relativeTime } from "@/lib/format";
+import { humanize } from "@/lib/format";
 import type { Agent, AgentRun, Project, Summary } from "@/lib/types";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -228,9 +229,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <p className="text-xs" style={{ color: "var(--faint)" }}>
-            Money, invoices, budgets and FX live in Our Money Hub. <OpenInMoneyHub />
-          </p>
+          <FinanceFromOmh />
+
         </>
       )}
     </>

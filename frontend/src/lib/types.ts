@@ -3,6 +3,8 @@ export interface Project {
   client_id: string | null; client_name: string | null; repo_owner: string | null; repo_name: string | null;
   production_url: string | null; start_date: string | null; due_date: string | null; completed_at: string | null;
   retainer_id: string | null;
+  kind?: string | null; visibility?: string | null; is_private?: boolean;
+  repo_pushed_at?: string | null;
   verified: boolean; is_demo: boolean; task_total: number; task_done: number; progress: number; updated_at: string;
   milestones?: { id: string; title: string; due_date: string | null; done: boolean }[];
 }
@@ -43,4 +45,33 @@ export interface PortalOverview {
   projects: { id: string; name: string; status: string; progress: number; summary: string | null; due_date: string | null; is_demo: boolean; milestones: { title: string; due_date: string | null; done: boolean }[] }[];
   documents: { kind: string; title: string; status: string; omh_reference: string | null }[];
   files: { available: boolean; detail: string }; support: { available: boolean; detail: string };
+}
+
+export type OmhMoney = { amount: string; currency: string; minor?: number } | null;
+export interface OmhCurrencyRow {
+  balance?: OmhMoney; pending?: OmhMoney; income_month?: OmhMoney;
+  expenses_month?: OmhMoney; net_month?: OmhMoney; ai_usage_month?: OmhMoney;
+}
+export interface OmhAiBudget {
+  id: string; name: string; provider?: string | null; allocated?: OmhMoney;
+  actual?: OmhMoney; reserved?: OmhMoney; available?: OmhMoney; state?: string;
+  ragi_project_id?: string | null;
+}
+export interface OmhFinancePayload {
+  source?: string; schema_version?: string; as_of?: string; month?: string;
+  has_data?: boolean; linked?: boolean; note?: string;
+  by_currency?: Record<string, OmhCurrencyRow>;
+  ai_budgets?: OmhAiBudget[];
+}
+export interface OmhFinanceResponse {
+  status: "ok" | "unlinked" | "not_configured" | "asleep" | "error";
+  detail: string; source: string; summary: OmhFinancePayload | null;
+}
+export interface GithubSyncStatus {
+  configured: boolean; user?: string; include_private?: boolean; interval_hours?: number;
+  last_at: string | null; last_result: string | null; last_ok: boolean | null;
+}
+export interface RegistryPlanItem {
+  name: string; slug: string; kind: string; repo?: string | null; private?: boolean;
+  production_url?: string | null; sites?: number; action: string; detail?: string;
 }

@@ -16,6 +16,7 @@ class EventOutbox(IdMixin, Base):
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False, index=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_error: Mapped[str | None] = mapped_column(Text)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

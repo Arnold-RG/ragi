@@ -20,7 +20,7 @@ KEYRING = {"keys": [
     {"kid": "omh-next", "service": "omh", "secret": "n" * 40, "scopes": ["events:write"]},
     {"kid": "omh-old", "service": "omh", "secret": "x" * 40, "scopes": ["events:write"], "not_after": "2020-01-01T00:00:00Z"},
     {"kid": "omh-readonly", "service": "omh", "secret": "r" * 40, "scopes": ["events:read"]},
-    {"kid": "ragi-test", "service": "ragi", "secret": "g" * 40, "scopes": ["budget:reserve", "events:write"]},
+    {"kid": "ragi-test", "service": "ragi", "secret": "g" * 40, "scopes": ["budget:reserve", "events:write", "finance:read"]},
 ]}
 (_tmp / "keyring.json").write_text(json.dumps(KEYRING))
 

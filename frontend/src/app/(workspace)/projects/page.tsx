@@ -12,10 +12,19 @@ import { formatDate, humanize } from "@/lib/format";
 import type { Client, Project } from "@/lib/types";
 
 const FILTERS = ["all", "active", "upcoming", "paused", "completed", "failed", "unverified"] as const;
+const KIND_FILTERS = ["all", "own_product", "client"] as const;
+
+function kindLabel(kind?: string | null) {
+  if (kind === "own_product") return "Own product";
+  if (kind === "client") return "Client";
+  return null;
+}
+
 
 export default function ProjectsPage() {
   const { data, mutate } = useSWR<Project[]>("/projects", fetcher);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
+  const [kind, setKind] = useState<(typeof KIND_FILTERS)[number]>("all");
   const [creating, setCreating] = useState(false);
   const [view, setView] = useState<"board" | "list">("board");
   const [phone, setPhone] = useState(false);
@@ -26,16 +35,17 @@ export default function ProjectsPage() {
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
-  const list = (data ?? []).filter((p) => filter === "all" || p.status === filter);
+  const typed = (data ?? []).filter((p) => kind === "all" || p.kind === kind);
+  const list = typed.filter((p) => filter === "all" || p.status === filter);
   const boardCols = FILTERS.filter((f) => f !== "all").map((f) => ({
     id: f, label: f[0].toUpperCase() + f.slice(1),
-    items: (data ?? []).filter((p) => p.status === f),
+    items: typed.filter((p) => p.status === f),
     warning: f === "paused", error: f === "failed" || f === "unverified",
     emptyNote: f === "completed" ? "Nothing completed yet" : f === "failed" ? "No failed projects" : "No projects in this stage",
   }));
   return (
     <>
-      <PageHeader eyebrow="Operate" title="Projects" subtitle="Ecosystem products and client work. Progress comes from recorded tasks, never typed in."
+      <PageHeader eyebrow="Operate" title="Projects" subtitle="Own products and client work, with live sites where they exist. Progress comes from recorded tasks, never typed in."
         actions={
           <>
             <div className="seg" role="radiogroup" aria-label="View">
@@ -45,6 +55,13 @@ export default function ProjectsPage() {
             <button className="btn btn-primary" onClick={() => setCreating(true)}><Plus size={15} /> New project</button>
           </>
         } />
+      <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1" role="radiogroup" aria-label="Project type">
+        {KIND_FILTERS.map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={`chip h-8 shrink-0 px-3 ${kind === k ? "border-accent/50 bg-accent/15 text-ink" : ""}`}>
+            {k === "all" ? "All types" : k === "own_product" ? "Own products" : "Clients"} {data && <span className="num text-faint">{k === "all" ? data.length : data.filter((p) => p.kind === k).length}</span>}
+          </button>
+        ))}
+      </div>
       {view === "board" && data && (
         <KanbanBoard
           columns={boardCols}
@@ -54,6 +71,7 @@ export default function ProjectsPage() {
               <div className="body">
                 <div className="flex flex-wrap gap-1">
                   <span className="lbl"><i style={{ background: "var(--c1)" }} />{humanize(p.category)}</span>
+                  {kindLabel(p.kind) && <span className="lbl">{kindLabel(p.kind)}</span>}
                   <DemoBadge show={p.is_demo} />
                 </div>
                 <div className="title">{p.name}</div>
@@ -80,7 +98,7 @@ export default function ProjectsPage() {
                 <Link href={`/projects/${p.id}`} className="absolute inset-0 z-0" aria-label={p.name} />
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="eyebrow mb-1">{humanize(p.category)}</div>
+                    <div className="eyebrow mb-1">{humanize(p.category)}{kindLabel(p.kind) ? ` · ${kindLabel(p.kind)}` : ""}</div>
                     <h3 className="truncate font-display text-xl">{p.name}</h3>
                     <div className="truncate text-xs text-muted">{p.client_name ?? "Arnova Group"}</div>
                   </div>
@@ -124,7 +142,7 @@ function NewProject({ open, onClose, onCreated }: { open: boolean; onClose: () =
         <input className="input" placeholder="Project name" value={f.name} onChange={set("name")} required minLength={2} aria-label="Project name" />
         <div className="grid grid-cols-2 gap-2">
           <select className="input" value={f.category} onChange={set("category")} aria-label="Category">
-            {["client-website", "agency-website", "mobile-app", "product", "operations", "finance", "entertainment", "portfolio", "cybersecurity"].map((c) => <option key={c} value={c}>{humanize(c)}</option>)}
+            {["client-website", "agency-website", "mobile-app", "product", "tool", "operations", "finance", "entertainment", "portfolio", "cybersecurity"].map((c) => <option key={c} value={c}>{humanize(c)}</option>)}
           </select>
           <select className="input" value={f.client_id} onChange={set("client_id")} aria-label="Client"><option value="">Internal (Arnova Group)</option>{clients?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <input className="input" type="date" value={f.due_date} onChange={set("due_date")} aria-label="Due date" />

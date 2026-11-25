@@ -7,7 +7,7 @@ ProjectStatus = Literal["upcoming", "active", "paused", "completed", "unverified
 Priority = Literal["low", "medium", "high", "critical"]
 Category = Literal[
     "operations", "finance", "entertainment", "agency-website", "client-website",
-    "portfolio", "cybersecurity", "mobile-app", "product",
+    "portfolio", "cybersecurity", "mobile-app", "product", "tool",
 ]
 
 
@@ -81,6 +81,10 @@ class ProjectOut(BaseModel):
     verified: bool
     is_demo: bool
     owner_approval_required: bool
+    kind: str | None = None
+    visibility: str | None = None
+    is_private: bool = False
+    repo_pushed_at: datetime | None = None
     task_total: int = 0
     task_done: int = 0
     progress: int = 0

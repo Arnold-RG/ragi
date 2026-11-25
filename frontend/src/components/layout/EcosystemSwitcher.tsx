@@ -1,7 +1,8 @@
 "use client";
 import { ArrowUpRight } from "lucide-react";
+import { omhPublicUrl } from "@/lib/ecosystem-urls";
 
-const OMH_URL = process.env.NEXT_PUBLIC_OMH_URL ?? "http://localhost:3420";
+const OMH_URL = omhPublicUrl();
 
 /** RAGI ⇄ Our Money Hub. Separate apps, accounts and sessions — no shared SSO. */
 export function EcosystemSwitcher() {

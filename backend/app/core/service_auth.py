@@ -2,12 +2,15 @@
 
 Contract: ecosystem-contracts/docs/authentication.md
 
-The keyring is a JSON file outside the repository (ECOSYSTEM_KEYRING_FILE):
+The keyring is JSON of the form:
   {"keys": [
      {"kid": "omh-2026-11", "service": "omh", "secret": "...", "scopes": ["events:write"],
       "not_before": "2026-11-01T00:00:00Z", "not_after": "2027-02-01T00:00:00Z"},
-     {"kid": "ragi-2026-11", "service": "ragi", "secret": "...", "scopes": ["budget:reserve", "events:write"], ...}
+     {"kid": "ragi-2026-11", "service": "ragi", "secret": "...",
+      "scopes": ["budget:reserve", "events:write", "finance:read"], ...}
   ]}
+On Render set ECOSYSTEM_KEYRING_JSON (the JSON itself). Locally, ECOSYSTEM_KEYRING_FILE may point
+at a file outside the repository.
 Each service has its OWN key(s). Rotation = add the new kid, switch the signer, retire the old kid
 after its not_after. Requests carry X-Arnova-Key-Id, X-Arnova-Timestamp and X-Arnova-Signature.
 """
@@ -44,18 +47,30 @@ def _dt(v: str | None) -> datetime | None:
     return datetime.fromisoformat(v.replace("Z", "+00:00")) if v else None
 
 
-def load_keyring(path: str | None = None) -> dict[str, ServiceKey]:
-    path = path or get_settings().ecosystem_keyring_file
-    if not path or not Path(path).exists():
-        return {}
-    raw = json.loads(Path(path).read_text())
-    keys = {}
+def parse_keyring(raw: dict) -> dict[str, ServiceKey]:
+    keys: dict[str, ServiceKey] = {}
     for k in raw.get("keys", []):
         if len(k.get("secret", "")) < 32:
             raise ValueError(f"Key {k.get('kid')} secret is too short (min 32 chars)")
         keys[k["kid"]] = ServiceKey(k["kid"], k["service"], k["secret"], list(k.get("scopes", [])),
                                     _dt(k.get("not_before")), _dt(k.get("not_after")))
     return keys
+
+
+def load_keyring(path: str | None = None) -> dict[str, ServiceKey]:
+    """Load keys from an explicit file path, or from env JSON, or from ECOSYSTEM_KEYRING_FILE."""
+    if path is not None:
+        if not path or not Path(path).exists():
+            return {}
+        return parse_keyring(json.loads(Path(path).read_text()))
+    s = get_settings()
+    blob = (s.ecosystem_keyring_json or "").strip()
+    if blob:
+        return parse_keyring(json.loads(blob))
+    file_path = s.ecosystem_keyring_file
+    if not file_path or not Path(file_path).exists():
+        return {}
+    return parse_keyring(json.loads(Path(file_path).read_text()))
 
 
 def verify_request(headers, body: bytes, *, scope: str, keyring: dict[str, ServiceKey] | None = None,

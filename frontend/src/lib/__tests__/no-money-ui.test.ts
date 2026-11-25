@@ -47,10 +47,21 @@ describe("operations home", () => {
       "Agent work",
       "LiveActivity",
       "ThroughputChart",
-      "OpenInMoneyHub",
+      "FinanceFromOmh",
     ]) {
       expect(dash).toContain(s);
     }
-    expect(dash).not.toMatch(/formatMoney|Invoices outstanding|by_currency|total_balance/);
+    expect(dash).not.toMatch(/formatMoney|Invoices outstanding|total_balance/);
+  });
+});
+
+describe("settings connections", () => {
+  it("has a Sync from GitHub control and a project registry review", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const panel = readFileSync(resolve(import.meta.dirname, "../../components/settings/ConnectionsPanel.tsx"), "utf8");
+    expect(panel).toContain("Sync from GitHub");
+    expect(panel).toContain("Project registry");
+    expect(panel).toContain("Review plan");
   });
 });

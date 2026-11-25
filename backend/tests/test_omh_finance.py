@@ -33,14 +33,20 @@ def test_nom_02_dashboard_and_projects_have_no_money(world):
     assert _walk(listed) == []
 
 
-def test_nom_n01_finance_summary_route_is_gone(world):
+def test_nom_n01_finance_summary_is_not_a_ragi_book(world):
+    """RAGI does not expose a book-of-record /finance-summary. The OMH snapshot lives under /integrations/omh/summary."""
     c = login("op@ragi.local")
     assert c.get("/api/v1/finance-summary").status_code == 404
+    r = c.get("/api/v1/integrations/omh/summary")
+    assert r.status_code == 200
+    assert r.json()["source"] == "omh"
 
 
-def test_nom_03_no_finance_summary_helper():
-    import app.integrations.omh.client as client
-    assert not hasattr(client, "finance_summary")
+def test_nom_03_summary_helper_fails_closed():
+    from app.integrations.omh.client import fetch_summary
+    result = fetch_summary()
+    assert result.status in {"not_configured", "asleep"}
+    assert result.payload is None
 
 
 def test_showcase_has_no_money_and_lists_arnold_rg_repos(world):

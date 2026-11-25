@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
+import { omhPublicUrl } from "@/lib/ecosystem-urls";
 
-export const OMH_URL = process.env.NEXT_PUBLIC_OMH_URL ?? "http://localhost:3420";
+export const OMH_URL = omhPublicUrl();
 
 export function OpenInMoneyHub({
   href = "/",

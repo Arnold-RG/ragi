@@ -32,6 +32,10 @@ class Project(IdMixin, TimestampMixin, Base):
     automatic_modification: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    kind: Mapped[str | None] = mapped_column(String(20))  # own_product | client
+    visibility: Mapped[str | None] = mapped_column(String(20))  # public | private
+    is_private: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    repo_pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ProjectMilestone(IdMixin, TimestampMixin, Base):

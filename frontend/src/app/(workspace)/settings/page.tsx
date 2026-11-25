@@ -1,19 +1,17 @@
 "use client";
-import { CheckCircle2, CircleDashed, Lock, ShieldCheck } from "lucide-react";
+import { Lock, ShieldCheck } from "lucide-react";
 import useSWR from "swr";
 import { useMe } from "@/components/layout/AuthProvider";
 import { setTheme, useTheme } from "@/components/layout/ThemeToggle";
+import { ConnectionsPanel } from "@/components/settings/ConnectionsPanel";
 import { Card, CardTitle, PageHeader, Skeleton, TbdNote } from "@/components/ui/primitives";
 import { fetcher } from "@/lib/api";
 import type { Summary } from "@/lib/types";
-
-interface Integration { id: string; name: string; kind: string; connected: boolean; detail: string }
 
 export default function SettingsPage() {
   const me = useMe();
   const theme = useTheme();
   const { data: s } = useSWR<Summary>("/dashboard/summary", fetcher);
-  const { data: ints } = useSWR<{ items: Integration[] }>("/integrations", fetcher);
   const switches = s ? [
     { name: "AI agents", on: s.safety.agents_enabled, env: "AGENTS_ENABLED" },
     { name: "Repository writes", on: s.safety.repository_writes_enabled, env: "REPOSITORY_WRITES_ENABLED" },
@@ -57,19 +55,9 @@ export default function SettingsPage() {
           <p className="mt-4 text-xs text-muted">Switches are set on the server only, never from the browser.</p>
           <div className="mt-3"><TbdNote gap={19}>Who may flip the emergency stop, and how, is your decision.</TbdNote></div>
         </Card>
-        <Card delay={0.15}>
-          <CardTitle>Connections</CardTitle>
-          {!ints ? <Skeleton className="h-32" /> : (
-            <ul className="space-y-3 text-sm">
-              {ints.items.map((i) => (
-                <li key={i.id} className="flex items-start gap-3">
-                  {i.connected ? <CheckCircle2 size={16} className="mt-0.5 text-positive" /> : <CircleDashed size={16} className="mt-0.5 text-muted" />}
-                  <div><div>{i.name}</div><div className="text-xs text-muted">{i.detail}</div></div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <div className="lg:col-span-1">
+          <ConnectionsPanel isOwner={me?.role === "owner"} />
+        </div>
       </div>
       <p className="mt-8 text-center text-xs text-muted">RAGI v2 · Created by Arnold Rurangwa / Arnova Group</p>
     </>

@@ -62,11 +62,19 @@ class Settings(BaseSettings):
     # Ecosystem
     ragi_api_url: str | None = None
     omh_api_url: str | None = None
-    # Per-service rotating keys (JSON file, outside the repo). See docs/authentication.md
-    # in ecosystem-contracts. RAGI signs outbound calls with its own active key id.
+    # Per-service rotating keys. Prefer ECOSYSTEM_KEYRING_JSON on Render (no disk).
+    # ECOSYSTEM_KEYRING_FILE remains available for local development.
+    ecosystem_keyring_json: str | None = None
     ecosystem_keyring_file: str | None = None
     ecosystem_signing_key_id: str | None = None
     ecosystem_max_clock_skew_seconds: int = 300
+    ecosystem_delivery_enabled: bool = True
+
+    # GitHub project sync (fine-grained read-only token). Leave empty to hide sync.
+    github_sync_token: str = ""
+    github_sync_user: str = "Arnold-RG"
+    github_sync_interval_hours: float = 0  # 0 = off; e.g. 6 = every six hours in-process
+    github_sync_include_private: bool = False
 
     object_storage_endpoint: str | None = None
     object_storage_bucket: str | None = None
